@@ -2,9 +2,10 @@ spring:
   application:
     name: nats-api-springboot-starter
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/ingest}
+    url: ${DB_URL:jdbc:mariadb://localhost:3306/ingest}
     username: ${DB_USERNAME:ingest}
     password: ${DB_PASSWORD:ingest}
+    driver-class-name: org.mariadb.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: validate

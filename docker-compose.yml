@@ -2,14 +2,15 @@
 #   SPRING_PROFILES_ACTIVE=worker ./mvnw spring-boot:run
 #   SPRING_PROFILES_ACTIVE=api    ./mvnw spring-boot:run
 services:
-  postgres:
-    image: postgres:16
+  mariadb:
+    image: mariadb:11
     environment:
-      POSTGRES_DB: ingest
-      POSTGRES_USER: ingest
-      POSTGRES_PASSWORD: ingest
+      MARIADB_DATABASE: ingest
+      MARIADB_USER: ingest
+      MARIADB_PASSWORD: ingest
+      MARIADB_ROOT_PASSWORD: root
     ports:
-      - "5432:5432"
+      - "3306:3306"
 
   nats:
     image: nats:2.10
