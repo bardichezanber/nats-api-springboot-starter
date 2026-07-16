@@ -86,7 +86,8 @@ docker compose up -d          # MariaDB 11 + NATS 2.10 (JetStream)
 SPRING_PROFILES_ACTIVE=worker ./mvnw spring-boot:run
 SPRING_PROFILES_ACTIVE=api    ./mvnw spring-boot:run
 
-./mvnw verify                 # tests run on H2 (MODE=MySQL), no infra needed
+./scripts/verify.sh           # build + tests on H2 (MODE=MySQL), no infra needed;
+                              # locates a JDK 21 automatically if JAVA_HOME is unset
 ```
 
 One image serves both roles:
