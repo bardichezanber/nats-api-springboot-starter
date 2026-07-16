@@ -1,0 +1,11 @@
+app:
+  nats:
+    url: ${NATS_URL:nats://localhost:4222}
+    source-a:
+      stream: SRC_A_EVENTS
+      subject: src-a.events.>
+      durable: ingest-worker-src-a
+    source-b:
+      stream: SRC_B_EVENTS
+      subject: src-b.events.>
+      durable: ingest-worker-src-b

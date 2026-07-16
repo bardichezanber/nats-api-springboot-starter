@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: nats-api-springboot-starter
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ingest}
+    username: ${DB_USERNAME:ingest}
+    password: ${DB_PASSWORD:ingest}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+app:
+  namespaces:
+    # Switch semantics: a namespace not listed here is business-wise not collected.
+    # Messages for it are ACKed and dropped by the worker, and it is absent from the API.
+    enabled: ${APP_NAMESPACES_ENABLED:alpha,beta}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
