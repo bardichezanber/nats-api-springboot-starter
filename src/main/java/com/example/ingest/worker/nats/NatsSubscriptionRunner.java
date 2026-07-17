@@ -1,14 +1,15 @@
 package com.example.ingest.worker.nats;
 
 import io.nats.client.Connection;
-import io.nats.client.Dispatcher;
-import io.nats.client.JetStream;
+import io.nats.client.ConsumerContext;
 import io.nats.client.JetStreamApiException;
 import io.nats.client.JetStreamManagement;
-import io.nats.client.MessageHandler;
-import io.nats.client.PushSubscribeOptions;
+import io.nats.client.MessageConsumer;
+import io.nats.client.api.AckPolicy;
+import io.nats.client.api.ConsumerConfiguration;
 import io.nats.client.api.StorageType;
 import io.nats.client.api.StreamConfiguration;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -17,11 +18,19 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Wires durable push subscriptions for every enabled source when the app
- * runs in the worker role. Streams are auto-created if missing — convenient
- * for local dev; provision them out-of-band in production.
+ * Starts one durable <em>pull</em> consumer per enabled source. Pull is the
+ * scalable model: every worker pod fetches from the same durable, so adding
+ * replicas divides the work — deployments scale per source on consumer lag.
+ * Streams and consumers are auto-created if missing — convenient for local
+ * dev; provision them out-of-band in production.
+ *
+ * <p>Note for pre-existing environments: the durables used to be push
+ * consumers. A consumer cannot change type in place — delete the old push
+ * consumer (e.g. {@code nats consumer rm}) before starting this version.
  */
 @Component
 @Profile("worker")
@@ -31,6 +40,7 @@ public class NatsSubscriptionRunner implements ApplicationRunner {
 
     private final Connection connection;
     private final SourceRegistry registry;
+    private final List<MessageConsumer> running = new ArrayList<>();
 
     public NatsSubscriptionRunner(Connection connection, SourceRegistry registry) {
         this.connection = connection;
@@ -39,12 +49,12 @@ public class NatsSubscriptionRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws IOException, JetStreamApiException {
-        JetStream jetStream = connection.jetStream();
-        Dispatcher dispatcher = connection.createDispatcher();
         for (SourceRegistry.Subscription subscription : registry.subscriptions()) {
             ensureStream(subscription.config());
-            subscribe(jetStream, dispatcher, subscription.config(), subscription.consumer()::onMessage);
-            log.info("subscribed source {} ({})", subscription.source().key(), subscription.config().subject());
+            running.add(startConsuming(subscription));
+            log.info("consuming source {} from stream {} (durable {})",
+                    subscription.source().key(), subscription.config().stream(),
+                    subscription.config().durable());
         }
     }
 
@@ -62,13 +72,27 @@ public class NatsSubscriptionRunner implements ApplicationRunner {
         }
     }
 
-    private void subscribe(JetStream jetStream, Dispatcher dispatcher,
-                           NatsProperties.SourceConfig config, MessageHandler handler)
+    private MessageConsumer startConsuming(SourceRegistry.Subscription subscription)
             throws IOException, JetStreamApiException {
-        PushSubscribeOptions options = PushSubscribeOptions.builder()
-                .stream(config.stream())
-                .durable(config.durable())
-                .build();
-        jetStream.subscribe(config.subject(), dispatcher, handler, false, options);
+        NatsProperties.SourceConfig config = subscription.config();
+        connection.jetStreamManagement().addOrUpdateConsumer(config.stream(),
+                ConsumerConfiguration.builder()
+                        .durable(config.durable())
+                        .filterSubject(config.subject())
+                        .ackPolicy(AckPolicy.Explicit)
+                        .build());
+        ConsumerContext context = connection.getConsumerContext(config.stream(), config.durable());
+        return context.consume(subscription.consumer()::onMessage);
+    }
+
+    @PreDestroy
+    void stop() {
+        for (MessageConsumer consumer : running) {
+            try {
+                consumer.stop();
+            } catch (Exception e) {
+                log.warn("failed to stop consumer cleanly", e);
+            }
+        }
     }
 }
