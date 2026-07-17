@@ -1,6 +1,7 @@
 package com.example.ingest.worker.source;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +19,19 @@ class SourceANamespaceResolverTest {
                 .isEqualTo("alpha");
         assertThat(resolver.resolve("orders", objectMapper.readTree("{\"region\":\"apac\"}")))
                 .isEqualTo("beta");
+    }
+
+    @Test
+    void pinsTheFullRoutingTable() throws JsonProcessingException {
+        // Append-only. Every known (category, region) -> namespace row is listed;
+        // adding a namespace adds rows, editing a row changes another namespace's traffic.
+        assertThat(resolver.resolve("orders", region("emea"))).isEqualTo("alpha");
+        assertThat(resolver.resolve("payments", region("emea"))).isEqualTo("alpha");
+        assertThat(resolver.resolve("orders", region("apac"))).isEqualTo("beta");
+    }
+
+    private JsonNode region(String region) throws JsonProcessingException {
+        return objectMapper.readTree("{\"region\":\"" + region + "\"}");
     }
 
     @Test
