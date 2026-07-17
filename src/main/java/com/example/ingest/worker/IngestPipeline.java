@@ -33,17 +33,26 @@ public class IngestPipeline {
     private final NamespaceRegistry registry;
     private final IngestLedgerRepository ledgerRepository;
     private final IngestedRecordRepository recordRepository;
+    private final IngestMetrics metrics;
 
     public IngestPipeline(NamespaceRegistry registry,
                           IngestLedgerRepository ledgerRepository,
-                          IngestedRecordRepository recordRepository) {
+                          IngestedRecordRepository recordRepository,
+                          IngestMetrics metrics) {
         this.registry = registry;
         this.ledgerRepository = ledgerRepository;
         this.recordRepository = recordRepository;
+        this.metrics = metrics;
     }
 
     @Transactional
     public IngestResult ingest(String namespaceKey, CommonEnvelope envelope) {
+        IngestResult result = doIngest(namespaceKey, envelope);
+        metrics.result(envelope.source(), namespaceKey, result);
+        return result;
+    }
+
+    private IngestResult doIngest(String namespaceKey, CommonEnvelope envelope) {
         Optional<NamespacePolicy> policy = registry.find(namespaceKey);
         if (policy.isEmpty()) {
             if (registry.isKnown(namespaceKey)) {

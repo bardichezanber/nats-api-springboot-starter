@@ -6,6 +6,7 @@ import com.example.ingest.record.IngestedRecordRepository;
 import com.example.ingest.worker.ledger.IngestLedgerRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ class IngestPipelineIntegrationTest {
 
     @Autowired
     private IngestLedgerRepository ledger;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -74,6 +78,15 @@ class IngestPipelineIntegrationTest {
         assertThat(result).isEqualTo(IngestResult.UNKNOWN_NAMESPACE);
         assertThat(records.count()).isZero();
         assertThat(ledger.count()).isZero();
+    }
+
+    @Test
+    void countsEachResultBySourceAndNamespace() throws JsonProcessingException {
+        pipeline.ingest("alpha", envelope("metrics-1"));
+
+        assertThat(meterRegistry.get("ingest.messages")
+                .tags("source", "source-a", "namespace", "alpha", "result", "SAVED")
+                .counter().count()).isGreaterThanOrEqualTo(1.0);
     }
 
     private CommonEnvelope envelope(String dedupKey) throws JsonProcessingException {
