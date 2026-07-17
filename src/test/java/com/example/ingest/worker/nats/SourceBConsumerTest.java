@@ -2,11 +2,13 @@ package com.example.ingest.worker.nats;
 
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
+import com.example.ingest.worker.IngestMetrics;
 import com.example.ingest.worker.IngestPipeline;
 import com.example.ingest.worker.IngestResult;
 import com.example.ingest.worker.source.CommonPayloadReader;
 import com.example.ingest.worker.source.SourceBNamespaceResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.nats.client.Message;
 import io.nats.client.impl.Headers;
 import io.nats.client.impl.NatsMessage;
@@ -26,7 +28,8 @@ class SourceBConsumerTest {
 
     private final IngestPipeline pipeline = mock(IngestPipeline.class);
     private final SourceBConsumer consumer = new SourceBConsumer(
-            new CommonPayloadReader(new ObjectMapper()), new SourceBNamespaceResolver(), pipeline);
+            new CommonPayloadReader(new ObjectMapper()), new SourceBNamespaceResolver(), pipeline,
+            new IngestMetrics(new SimpleMeterRegistry()));
 
     @Test
     void usesTheDeclaredNamespaceFromTheHeader() {

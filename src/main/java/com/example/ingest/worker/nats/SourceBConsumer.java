@@ -2,6 +2,7 @@ package com.example.ingest.worker.nats;
 
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
+import com.example.ingest.worker.IngestMetrics;
 import com.example.ingest.worker.IngestPipeline;
 import com.example.ingest.worker.IngestResult;
 import com.example.ingest.worker.source.CommonPayload;
@@ -29,13 +30,16 @@ public class SourceBConsumer implements SourceConsumer {
     private final CommonPayloadReader payloadReader;
     private final SourceBNamespaceResolver namespaceResolver;
     private final IngestPipeline pipeline;
+    private final IngestMetrics metrics;
 
     public SourceBConsumer(CommonPayloadReader payloadReader,
                            SourceBNamespaceResolver namespaceResolver,
-                           IngestPipeline pipeline) {
+                           IngestPipeline pipeline,
+                           IngestMetrics metrics) {
         this.payloadReader = payloadReader;
         this.namespaceResolver = namespaceResolver;
         this.pipeline = pipeline;
+        this.metrics = metrics;
     }
 
     @Override
@@ -46,11 +50,12 @@ public class SourceBConsumer implements SourceConsumer {
     @Override
     public void onMessage(Message message) {
         try {
-            IngestResult result = handle(message);
+            IngestResult result = metrics.timeHandle(source(), () -> handle(message));
             log.debug("source B message on {} -> {}", message.getSubject(), result);
             message.ack();
         } catch (IllegalArgumentException e) {
             // Poison message: redelivery cannot fix it, terminate instead.
+            metrics.poison(source());
             log.warn("terminating malformed source B message on {}: {}", message.getSubject(), e.getMessage());
             message.term();
         } catch (Exception e) {

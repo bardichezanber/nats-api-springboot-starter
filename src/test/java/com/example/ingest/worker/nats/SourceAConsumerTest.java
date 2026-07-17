@@ -2,17 +2,20 @@ package com.example.ingest.worker.nats;
 
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
+import com.example.ingest.worker.IngestMetrics;
 import com.example.ingest.worker.IngestPipeline;
 import com.example.ingest.worker.IngestResult;
 import com.example.ingest.worker.source.CommonPayloadReader;
 import com.example.ingest.worker.source.SourceANamespaceResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.nats.client.Message;
 import io.nats.client.impl.Headers;
 import io.nats.client.impl.NatsMessage;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,9 +29,11 @@ import static org.mockito.Mockito.when;
 
 class SourceAConsumerTest {
 
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private final IngestPipeline pipeline = mock(IngestPipeline.class);
     private final SourceAConsumer consumer = new SourceAConsumer(
-            new CommonPayloadReader(new ObjectMapper()), new SourceANamespaceResolver(), pipeline);
+            new CommonPayloadReader(new ObjectMapper()), new SourceANamespaceResolver(), pipeline,
+            new IngestMetrics(meterRegistry));
 
     @Test
     void resolvesNamespaceFromHeaderAndCommonFieldThenDelegates() {
@@ -64,6 +69,22 @@ class SourceAConsumerTest {
 
         assertThatThrownBy(() -> consumer.handle(message))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void malformedMessageIsTerminatedAndCountedAsPoison() {
+        Message message = mock(Message.class);
+        when(message.getSubject()).thenReturn("src-a.events.orders.created");
+        when(message.getHeaders()).thenReturn(new Headers().add(SourceAConsumer.CATEGORY_HEADER, "orders"));
+        when(message.getData()).thenReturn("not json".getBytes(StandardCharsets.UTF_8));
+
+        consumer.onMessage(message);
+
+        verify(message).term();
+        assertThat(meterRegistry.get("ingest.poison").tag("source", "source-a").counter().count())
+                .isEqualTo(1.0);
+        assertThat(meterRegistry.get("ingest.handle").tag("source", "source-a").timer().count())
+                .isEqualTo(1L);
     }
 
     @Test
