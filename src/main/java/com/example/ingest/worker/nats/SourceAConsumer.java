@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("worker")
-public class SourceAConsumer {
+public class SourceAConsumer implements SourceConsumer {
 
     public static final String SUBJECT_PREFIX = "src-a.events.";
     public static final String CATEGORY_HEADER = "X-Category";
@@ -39,6 +39,12 @@ public class SourceAConsumer {
         this.pipeline = pipeline;
     }
 
+    @Override
+    public SourceKey source() {
+        return SourceKey.SOURCE_A;
+    }
+
+    @Override
     public void onMessage(Message message) {
         try {
             IngestResult result = handle(message);

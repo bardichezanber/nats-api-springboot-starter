@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("worker")
-public class SourceBConsumer {
+public class SourceBConsumer implements SourceConsumer {
 
     public static final String SUBJECT_PREFIX = "src-b.events.";
     public static final String NAMESPACE_HEADER = "X-Namespace";
@@ -38,6 +38,12 @@ public class SourceBConsumer {
         this.pipeline = pipeline;
     }
 
+    @Override
+    public SourceKey source() {
+        return SourceKey.SOURCE_B;
+    }
+
+    @Override
     public void onMessage(Message message) {
         try {
             IngestResult result = handle(message);
