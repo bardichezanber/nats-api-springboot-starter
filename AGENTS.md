@@ -43,6 +43,8 @@ Tests run on in-memory H2 — no Docker, no database, no NATS needed.
    - handled fine (any `IngestResult`) → `ack()`
    - `IllegalArgumentException` (malformed, poison) → `term()`
    - any other exception → `nak()`
+   Metrics wrap these paths (poison counter on term) — keep the counters
+   when touching consumers.
 8. Do not add dependencies to `pom.xml` unless the task explicitly requires it.
 9. Do not rename packages, move files, or reformat code you were not asked to touch.
    Make the smallest change that completes the task.
@@ -65,18 +67,21 @@ src/main/java/com/example/ingest/
                         NamespaceProperties, CommonEnvelope, SourceKey
   namespace/policies/   One class per namespace (AlphaNamespacePolicy, ...)
   record/               SHARED. IngestedRecord entity + repository (the main table)
-  worker/               WORKER ONLY. IngestPipeline, IngestResult
+  worker/               WORKER ONLY. IngestPipeline, IngestResult,
+                        IngestMetrics (source/namespace/result tag convention)
   worker/ledger/        Dedup ledger entity + repository
   worker/source/        CommonPayloadReader + per-source namespace resolvers
-  worker/nats/          NatsConfig, NatsProperties, NatsSubscriptionRunner,
-                        SourceAConsumer, SourceBConsumer
+  worker/nats/          NatsConfig, NatsProperties, SourceProperties,
+                        SourceConsumer (SPI), SourceRegistry,
+                        NatsSubscriptionRunner, SourceAConsumer, SourceBConsumer
   api/                  API ONLY. NamespaceController, RecordResponse
 src/main/resources/
   application.yml               shared config (DB, enabled namespaces)
-  application-worker.yml        NATS streams/subjects/durables
+  application-worker.yml        enabled sources + NATS streams/subjects/durables
   application-api.yml           server port
   db/migration/V1__init.sql     schema (append V2, V3, ... — never edit V1)
 src/test/java/...               mirrors main; src/test/resources/application.yml = H2
+src/test/resources/golden/<ns>/ golden contract files, one dir per namespace
 ```
 
 Data flow: NATS message → `SourceAConsumer`/`SourceBConsumer` → resolver picks
@@ -126,7 +131,12 @@ public class GammaNamespacePolicy implements NamespacePolicy {
 }
 ```
 
-**3. Enable it** — add the key to the `enabled` list in
+**3. Golden contract** — create `src/test/resources/golden/gamma/` with at least
+`happy.input.json` + `happy.expected.json` and one `<case>.invalid.json`.
+`NamespaceGoldenTest` fails until the directory exists, and only ever reads
+YOUR namespace's directory — other namespaces' files must not change.
+
+**4. Enable it** — add the key to the `enabled` list in
 `src/main/resources/application.yml` default AND `src/test/resources/application.yml`
 if tests need it. Deployments control the real list via `APP_NAMESPACES_ENABLED`.
 
@@ -171,15 +181,19 @@ step 2 disagree — fix them; do not touch `ddl-auto`.
 
 Follow the SOURCE_A trail end to end; every step mirrors an existing class:
 
-1. Add the enum constant in `namespace/SourceKey.java`.
-2. Add a source block in `worker/nats/NatsProperties.java` + `application-worker.yml`
-   (stream, subject like `src-c.events.>`, durable).
+1. Add the enum constant in `namespace/SourceKey.java` (with its kebab-case
+   config key, e.g. `SOURCE_C("source-c")`).
+2. Add a source block under `app.nats.sources.source-c` in
+   `application-worker.yml` (stream, subject like `src-c.events.>`, durable),
+   and add `source-c` to the `APP_SOURCES_ENABLED` default in the same file.
 3. Write a resolver in `worker/source/` deciding the namespace from
    header/body per the upstream contract (+ unit test).
-4. Copy `SourceAConsumer.java` → `SourceCConsumer.java`, adjust the subject prefix,
-   header names, and resolver call (+ test, copy `SourceAConsumerTest`).
-5. Register it in `worker/nats/NatsSubscriptionRunner.java` (constructor +
-   `ensureStream` + `subscribe`, same as the existing two).
+4. Copy `SourceAConsumer.java` → `SourceCConsumer.java` (it implements
+   `SourceConsumer`), adjust the subject prefix, header names, resolver call
+   and `source()` (+ test, copy `SourceAConsumerTest`).
+5. There is NO runner change: `SourceRegistry` discovers the consumer and
+   subscribes it if the key is enabled. It fails at startup if config and
+   beans disagree.
 
 ## Troubleshooting
 

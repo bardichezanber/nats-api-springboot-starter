@@ -67,12 +67,27 @@ There are no cross-namespace reads.
 - Malformed payload (`IllegalArgumentException`) → `term()` (poison, redelivery cannot fix it)
 - Any other failure → `nak()` (redelivered)
 
+Malformed messages also increment the `ingest.poison` counter.
+
+## Scaling & monitoring
+
+Workers use durable **pull** consumers: every replica fetches from the same
+durable, so per-route deployments (`APP_SOURCES_ENABLED=source-a`) scale
+horizontally on consumer lag (e.g. KEDA's nats-jetstream scaler).
+Upgrading an existing environment: the old push consumers must be deleted
+(`nats consumer rm <stream> <durable>`) before starting this version.
+
+`/actuator/prometheus` exposes Micrometer metrics tagged `source` /
+`namespace` / `result`: `ingest_messages_total`, `ingest_handle_seconds`,
+`ingest_poison_total`.
+
 ## Configuration
 
 | Env var | Default | Meaning |
 |---|---|---|
 | `SPRING_PROFILES_ACTIVE` | — | `worker` or `api` |
 | `APP_NAMESPACES_ENABLED` | `alpha,beta` | Enabled namespace keys (switch semantics) |
+| `APP_SOURCES_ENABLED` | `source-a,source-b` | Sources this worker subscribes (switch semantics, per-route deployments) |
 | `DB_URL` | `jdbc:mariadb://localhost:3306/ingest` | JDBC URL (MariaDB) |
 | `DB_USERNAME` / `DB_PASSWORD` | `ingest` / `ingest` | DB credentials |
 | `NATS_URL` | `nats://localhost:4222` | NATS server (worker only) |
@@ -104,10 +119,12 @@ docker run -e SPRING_PROFILES_ACTIVE=api    -e DB_URL=... -p 8080:8080     inges
 `namespace/policies/`, then list its key in `APP_NAMESPACES_ENABLED` wherever it
 should be live. Nothing else changes: the pipeline, ledger, table, and API pick it up.
 
-**Add a source** — add a consumer under `worker/nats/` (subject → event type, header/body
-→ namespace via a resolver in `worker/source/`), register its subscription in
-`NatsSubscriptionRunner`, and add its stream config to `application-worker.yml`. All
-sources reuse `CommonPayloadReader`, `IngestPipeline`, and the same tables.
+**Add a source** — add a `SourceConsumer` implementation under `worker/nats/`
+(subject → event type, header/body → namespace via a resolver in `worker/source/`)
+and its stream config under `app.nats.sources.<key>` in `application-worker.yml`.
+No runner change: `SourceRegistry` subscribes every enabled source and fails fast
+when config and beans disagree. All sources reuse `CommonPayloadReader`,
+`IngestPipeline`, and the same tables.
 
 ## Layout
 
