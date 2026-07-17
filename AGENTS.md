@@ -37,8 +37,11 @@ Tests run on in-memory H2 — no Docker, no database, no NATS needed.
    Do not use JSON columns, generated columns, or MariaDB-only syntax.
 5. **No cross-namespace reads.** Every API query filters by one `namespace_key`.
    Do not add endpoints or repository methods that scan all namespaces.
-6. Worker beans stay `@Profile("worker")`, controllers stay `@Profile("api")`.
-   Shared code (`namespace/`, `record/`) has NO profile annotation.
+6. Worker beans stay `@Profile("worker")`, controllers stay `@Profile("api")`,
+   gateway beans stay `@Profile("gateway")`. Shared code (`namespace/`,
+   `record/`) has NO profile annotation. One deliberate exception:
+   `IngestPipeline` is `@Profile("!gateway")` — the gateway boots without a
+   database.
 7. Message handling semantics in consumers (do not reorder):
    - handled fine (any `IngestResult`) → `ack()`
    - `IllegalArgumentException` (malformed, poison) → `term()`
@@ -75,18 +78,24 @@ src/main/java/com/example/ingest/
                         SourceConsumer (SPI), SourceRegistry,
                         NatsSubscriptionRunner, SourceAConsumer, SourceBConsumer
   api/                  API ONLY. NamespaceController, RecordResponse
+  gateway/              GATEWAY ONLY. GatewayController + GatewayAuthenticator (SPI),
+                        EventPublisher -> NATS, ftp/ (FileSourceClient SPI + FtpPoller)
 src/main/resources/
   application.yml               shared config (DB, enabled namespaces)
   application-worker.yml        enabled sources + NATS streams/subjects/durables
   application-api.yml           server port
+  application-gateway.yml       gateway port/token/FTP; excludes DB autoconfig
   db/migration/V1__init.sql     schema (append V2, V3, ... — never edit V1)
 src/test/java/...               mirrors main; src/test/resources/application.yml = H2
 src/test/resources/golden/<ns>/ golden contract files, one dir per namespace
 ```
 
-Data flow: NATS message → `SourceAConsumer`/`SourceBConsumer` → resolver picks
-namespace → `IngestPipeline.ingest()` → ledger dedup → `NamespacePolicy.parse()`
+Data flow: NATS message → source consumer → resolver picks namespace →
+`IngestPipeline.ingest()` → ledger dedup → `NamespacePolicy.parse()`
 → `ingested_record` row. The API reads that same table, always scoped to one namespace.
+The gateway (profile `gateway`) bridges HTTP posts and FTP files into
+`src-http.events.>` / `src-ftp.events.>` — it publishes only, never resolves
+namespaces, never touches the DB.
 
 ---
 

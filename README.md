@@ -1,15 +1,17 @@
 # nats-api-springboot-starter
 
-Single-repo Spring Boot template: a JetStream NATS **ingest worker** and a **read API**
-share one codebase, one Docker image, and one database schema. The role is chosen at
-deploy time with `SPRING_PROFILES_ACTIVE=worker|api`.
+Single-repo Spring Boot template: a JetStream NATS **ingest worker**, a **read API**,
+and an **ingest gateway** (HTTP + FTP bridged into NATS) share one codebase, one
+Docker image, and one database schema. The role is chosen at deploy time with
+`SPRING_PROFILES_ACTIVE=worker|api|gateway`.
 
 ## Architecture
 
 Ingest has two independent dimensions:
 
 ```
-Sources     — two NATS sources (A / B), each with its own event types and its own
+Sources     — four sources: two native NATS (A / B) and two bridged through the
+              gateway (HTTP / FTP); each has its own event types and its own
               way of determining the namespace
 Namespaces  — one set shared by all sources; a namespace owns the parse logic
               for turning the common payload into the normalized record payload
@@ -32,6 +34,8 @@ NATS message ──> consumer (per source) ──> resolve namespace ──> Ing
 |---|---|
 | **A** | `X-Category` header **+** the common `region` body field, via `SourceANamespaceResolver` |
 | **B** | declared upstream in the `X-Namespace` header |
+| **HTTP** | declared by the caller, forwarded by the gateway in `X-Namespace` |
+| **FTP** | declared per file line, forwarded by the gateway in `X-Namespace` |
 
 ### Shared database schema
 
@@ -79,7 +83,28 @@ Upgrading an existing environment: the old push consumers must be deleted
 
 `/actuator/prometheus` exposes Micrometer metrics tagged `source` /
 `namespace` / `result`: `ingest_messages_total`, `ingest_handle_seconds`,
-`ingest_poison_total`.
+`ingest_poison_total` (worker) and `gateway_publish_total`,
+`gateway_ftp_files_total`, `gateway_ftp_scan_lag_seconds` (gateway).
+
+## Gateway role (HTTP + FTP sources)
+
+`SPRING_PROFILES_ACTIVE=gateway` runs a DB-free bridge that publishes into
+JetStream; the worker consumes the result like any other source.
+
+**HTTP**: `POST /gateway/events/{eventType}` with `Authorization: Bearer
+$APP_GATEWAY_TOKEN`, an `X-Namespace` header, and a common-payload JSON body
+(`eventId`, `occurredAt`, ...). Returns `202 {"dedupKey": ...}`. Auth is a
+static token placeholder — swap `StaticTokenGatewayAuthenticator` for the
+corporate `GatewayAuthenticator` implementation (see `TODO(auth)`).
+
+**FTP**: a poller scans `inbox/` on the configured FTP server. Files are
+NDJSON — each line `{"eventType": ..., "namespace": ..., "eventId": ...,
+"occurredAt": ..., ...}`. Lifecycle: `inbox/ -> processing/ (rename = the
+multi-instance lock) -> archive/`, or `error/` if any line is invalid (valid
+lines still publish; re-dropping a fixed file is safe — `Nats-Msg-Id` and the
+worker ledger dedup replays). A publish failure leaves the file in
+`processing/` for manual redrive. Protocols other than classic FTP are one
+`FileSourceClient` implementation away (`FtpFileSourceClient` is the FTP one).
 
 ## Configuration
 
@@ -90,7 +115,13 @@ Upgrading an existing environment: the old push consumers must be deleted
 | `APP_SOURCES_ENABLED` | `source-a,source-b` | Sources this worker subscribes (switch semantics, per-route deployments) |
 | `DB_URL` | `jdbc:mariadb://localhost:3306/ingest` | JDBC URL (MariaDB) |
 | `DB_USERNAME` / `DB_PASSWORD` | `ingest` / `ingest` | DB credentials |
-| `NATS_URL` | `nats://localhost:4222` | NATS server (worker only) |
+| `NATS_URL` | `nats://localhost:4222` | NATS server (worker and gateway) |
+| `APP_GATEWAY_TOKEN` | — | Gateway bearer token (unset = all requests rejected) |
+| `APP_FTP_ENABLED` | `false` | Enable the gateway FTP poller |
+| `APP_FTP_HOST` / `APP_FTP_PORT` | `localhost` / `21` | FTP server (gateway only) |
+| `APP_FTP_USERNAME` / `APP_FTP_PASSWORD` | — | FTP credentials |
+| `APP_FTP_INBOX_DIR` (+ `PROCESSING`/`ARCHIVE`/`ERROR`) | `/inbox` ... | FTP directories |
+| `APP_FTP_POLL_INTERVAL` | `30s` | FTP scan interval |
 | `SERVER_PORT` | `8080` | HTTP port (api only) |
 
 ## Running locally
