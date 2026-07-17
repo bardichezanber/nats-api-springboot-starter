@@ -19,9 +19,9 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 /**
- * Wires durable push subscriptions for both sources when the app runs in the
- * worker role. Streams are auto-created if missing — convenient for local
- * dev; provision them out-of-band in production.
+ * Wires durable push subscriptions for every enabled source when the app
+ * runs in the worker role. Streams are auto-created if missing — convenient
+ * for local dev; provision them out-of-band in production.
  */
 @Component
 @Profile("worker")
@@ -30,31 +30,22 @@ public class NatsSubscriptionRunner implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(NatsSubscriptionRunner.class);
 
     private final Connection connection;
-    private final NatsProperties properties;
-    private final SourceAConsumer sourceAConsumer;
-    private final SourceBConsumer sourceBConsumer;
+    private final SourceRegistry registry;
 
-    public NatsSubscriptionRunner(Connection connection,
-                                  NatsProperties properties,
-                                  SourceAConsumer sourceAConsumer,
-                                  SourceBConsumer sourceBConsumer) {
+    public NatsSubscriptionRunner(Connection connection, SourceRegistry registry) {
         this.connection = connection;
-        this.properties = properties;
-        this.sourceAConsumer = sourceAConsumer;
-        this.sourceBConsumer = sourceBConsumer;
+        this.registry = registry;
     }
 
     @Override
     public void run(ApplicationArguments args) throws IOException, JetStreamApiException {
-        ensureStream(properties.sourceA());
-        ensureStream(properties.sourceB());
-
         JetStream jetStream = connection.jetStream();
         Dispatcher dispatcher = connection.createDispatcher();
-        subscribe(jetStream, dispatcher, properties.sourceA(), sourceAConsumer::onMessage);
-        subscribe(jetStream, dispatcher, properties.sourceB(), sourceBConsumer::onMessage);
-        log.info("subscribed to source A ({}) and source B ({})",
-                properties.sourceA().subject(), properties.sourceB().subject());
+        for (SourceRegistry.Subscription subscription : registry.subscriptions()) {
+            ensureStream(subscription.config());
+            subscribe(jetStream, dispatcher, subscription.config(), subscription.consumer()::onMessage);
+            log.info("subscribed source {} ({})", subscription.source().key(), subscription.config().subject());
+        }
     }
 
     private void ensureStream(NatsProperties.SourceConfig config) throws IOException, JetStreamApiException {

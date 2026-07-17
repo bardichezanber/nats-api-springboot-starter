@@ -1,11 +1,16 @@
 app:
+  sources:
+    # Switch semantics: this worker subscribes only the sources listed here.
+    # Deployments set APP_SOURCES_ENABLED per route (e.g. "source-a").
+    enabled: ${APP_SOURCES_ENABLED:source-a,source-b}
   nats:
     url: ${NATS_URL:nats://localhost:4222}
-    source-a:
-      stream: SRC_A_EVENTS
-      subject: src-a.events.>
-      durable: ingest-worker-src-a
-    source-b:
-      stream: SRC_B_EVENTS
-      subject: src-b.events.>
-      durable: ingest-worker-src-b
+    sources:
+      source-a:
+        stream: SRC_A_EVENTS
+        subject: src-a.events.>
+        durable: ingest-worker-src-a
+      source-b:
+        stream: SRC_B_EVENTS
+        subject: src-b.events.>
+        durable: ingest-worker-src-b
