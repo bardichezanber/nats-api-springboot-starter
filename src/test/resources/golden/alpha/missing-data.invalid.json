@@ -1,0 +1,7 @@
+{
+  "source": "SOURCE_A",
+  "eventType": "orders.created",
+  "dedupKey": "e-2",
+  "occurredAt": "2026-01-01T00:00:00Z",
+  "body": {"eventId": "e-2", "occurredAt": "2026-01-01T00:00:00Z"}
+}

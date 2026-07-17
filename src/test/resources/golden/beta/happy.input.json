@@ -1,0 +1,7 @@
+{
+  "source": "SOURCE_B",
+  "eventType": "profile.updated",
+  "dedupKey": "e-3",
+  "occurredAt": "2026-01-01T00:00:00Z",
+  "body": {"attributes": [{"name": "amount", "value": 42}, {"name": "status", "value": "ok"}]}
+}

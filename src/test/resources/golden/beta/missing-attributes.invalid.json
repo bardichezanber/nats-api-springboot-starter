@@ -1,0 +1,7 @@
+{
+  "source": "SOURCE_B",
+  "eventType": "profile.updated",
+  "dedupKey": "e-4",
+  "occurredAt": "2026-01-01T00:00:00Z",
+  "body": {"eventId": "e-4"}
+}
