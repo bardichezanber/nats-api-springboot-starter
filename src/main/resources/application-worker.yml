@@ -2,7 +2,7 @@ app:
   sources:
     # Switch semantics: this worker subscribes only the sources listed here.
     # Deployments set APP_SOURCES_ENABLED per route (e.g. "source-a").
-    enabled: ${APP_SOURCES_ENABLED:source-a,source-b}
+    enabled: ${APP_SOURCES_ENABLED:source-a,source-b,source-http,source-ftp}
   nats:
     url: ${NATS_URL:nats://localhost:4222}
     sources:
@@ -14,3 +14,11 @@ app:
         stream: SRC_B_EVENTS
         subject: src-b.events.>
         durable: ingest-worker-src-b
+      source-http:
+        stream: SRC_HTTP_EVENTS
+        subject: src-http.events.>
+        durable: ingest-worker-src-http
+      source-ftp:
+        stream: SRC_FTP_EVENTS
+        subject: src-ftp.events.>
+        durable: ingest-worker-src-ftp
