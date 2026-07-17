@@ -6,7 +6,9 @@ package com.example.ingest.namespace;
  */
 public enum SourceKey {
     SOURCE_A("source-a"),
-    SOURCE_B("source-b");
+    SOURCE_B("source-b"),
+    SOURCE_HTTP("source-http"),
+    SOURCE_FTP("source-ftp");
 
     private final String key;
 

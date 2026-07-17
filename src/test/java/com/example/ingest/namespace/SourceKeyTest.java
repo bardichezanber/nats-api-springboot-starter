@@ -18,6 +18,8 @@ class SourceKeyTest {
     void configKeysAreKebabCase() {
         assertThat(SourceKey.SOURCE_A.key()).isEqualTo("source-a");
         assertThat(SourceKey.SOURCE_B.key()).isEqualTo("source-b");
+        assertThat(SourceKey.SOURCE_HTTP.key()).isEqualTo("source-http");
+        assertThat(SourceKey.SOURCE_FTP.key()).isEqualTo("source-ftp");
     }
 
     @Test
