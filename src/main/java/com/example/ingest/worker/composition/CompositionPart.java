@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * One buffered event waiting for the rest of its composition. The
@@ -42,6 +44,19 @@ public class CompositionPart {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    /**
+     * The part that opened the correlation — earliest {@code created_at},
+     * part key as the tiebreak. Used wherever one part must represent the
+     * whole correlation (composed/expired envelope source), so the choice is
+     * deterministic instead of a race outcome.
+     */
+    public static CompositionPart firstArrived(List<CompositionPart> parts) {
+        return parts.stream()
+                .min(Comparator.comparing(CompositionPart::getCreatedAt)
+                        .thenComparing(CompositionPart::getPartKey))
+                .orElseThrow();
+    }
 
     protected CompositionPart() {
     }

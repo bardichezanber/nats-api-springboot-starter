@@ -1,6 +1,7 @@
 package com.example.ingest.worker.composition;
 
 import com.example.ingest.namespace.CommonEnvelope;
+import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.IngestPipeline;
 import com.example.ingest.worker.IngestResult;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -144,7 +145,11 @@ public class CompositionStage {
                 .map(CompositionPart::getOccurredAt)
                 .max(Comparator.naturalOrder())
                 .orElse(trigger.occurredAt());
-        return new CommonEnvelope(trigger.source(), plan.composedEventType(), key, occurredAt, body);
+        // The trigger's source is a race outcome; the first-arrived part's is
+        // stable, which also keeps the record UNIQUE(source, dedup) backstop
+        // and the metric source tag deterministic.
+        SourceKey source = SourceKey.valueOf(CompositionPart.firstArrived(stored).getSourceKey());
+        return new CommonEnvelope(source, plan.composedEventType(), key, occurredAt, body);
     }
 
     private JsonNode readPayload(CompositionPart part) {
