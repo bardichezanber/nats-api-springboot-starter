@@ -95,7 +95,8 @@ src/main/java/com/example/ingest/
                         SourceConsumer (SPI), BaseSourceConsumer (owns
                         ack/term/nak — hard rule 7), SourceRegistry,
                         NatsSubscriptionRunner, SourceAConsumer, SourceBConsumer
-  api/                  API ONLY. NamespaceController, RecordResponse
+  api/                  API ONLY. NamespaceController, RecordResponse,
+                        RecordWindowResponse (keyset paging cursor)
   gateway/              GATEWAY ONLY. GatewayController + GatewayAuthenticator (SPI),
                         EventPublisher -> NATS, ftp/ (FileSourceClient SPI + FtpPoller)
 src/main/resources/

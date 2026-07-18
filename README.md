@@ -61,9 +61,14 @@ collected — the worker ACKs and drops its messages, and the API returns 404 fo
 ```
 GET /api/namespaces                          -> enabled namespace keys
 GET /api/namespaces/{key}/records?page=&size= -> page of records, newest first
+GET /api/namespaces/{key}/records/window?size=&occurredBefore=&idBefore=
+                                             -> keyset page, newest first
 ```
 
-There are no cross-namespace reads.
+There are no cross-namespace reads. `records` is classic offset paging;
+`window` is the keyset variant that stays cheap at any depth: call it without
+a cursor, then keep passing the response's `nextOccurredBefore`/`nextIdBefore`
+back until `records` comes back empty.
 
 ## Message handling semantics
 
