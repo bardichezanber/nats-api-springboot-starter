@@ -22,6 +22,18 @@ Run a single test class while iterating:
 
 Tests run on in-memory H2 — no Docker, no database, no NATS needed.
 
+Concurrency stress tests (composition/ledger races) are excluded from
+verify.sh. Run them explicitly when touching worker/composition/:
+
+```sh
+./scripts/stress.sh            # H2, no infra
+./scripts/stress.sh mariadb    # real MariaDB, needs Docker
+```
+
+The mariadb tier is the one that actually exercises lock contention —
+MariaDB rejects snapshot-stale reads (error 1020) that H2 never surfaces,
+so an H2-only green run does not prove the locking design.
+
 ## Hard rules (do not break these, do not "improve" them)
 
 1. **Never edit or delete an existing file in `src/main/resources/db/migration/`.**

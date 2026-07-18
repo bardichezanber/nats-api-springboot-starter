@@ -95,6 +95,7 @@ serialize on a pessimistic state-row lock; the state PK, the
 `(correlation_key, part_key)` unique constraint, and the guarded
 COMPOSED-update are backstops, so races surface as DUPLICATE/redelivery,
 never as lost or doubled events.
+Concurrency invariants are covered by `./scripts/stress.sh` (see AGENTS.md).
 
 ## Scaling & monitoring
 
