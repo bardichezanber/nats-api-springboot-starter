@@ -44,7 +44,7 @@ Both roles run the same Flyway migrations (`src/main/resources/db/migration/`).
 | Table | Used by | Purpose |
 |---|---|---|
 | `ingested_record` | worker (write), API (read) | The shared read model: every source and event type lands here, normalized by its namespace policy. `UNIQUE(source_key, dedup_key)`; indexed on `(namespace_key, occurred_at DESC)` because reads are always scoped to one namespace. |
-| `ingest_ledger` | worker only | Dedup ledger keyed by `source_key + ":" + dedup_key`. The ledger entry and the record commit in the same transaction; the primary key is the backstop under concurrent redelivery. |
+| `ingest_ledger` | worker only | Dedup ledger keyed by `source_key + ":" + dedup_key`. The ledger entry and the record commit in the same transaction; the primary key is the backstop under concurrent redelivery. A sweeper prunes entries older than `APP_LEDGER_RETENTION` (default 30d) — keep that retention longer than any stream's replay window, or replays of swept messages get stuck NAKing on the record unique constraint. |
 
 JPA runs with `ddl-auto: validate` — the schema is owned by Flyway, entities must match.
 
@@ -149,6 +149,8 @@ worker ledger dedup replays). A publish failure leaves the file in
 | `APP_FTP_POLL_INTERVAL` | `30s` | FTP scan interval |
 | `APP_COMPOSITION_RETENTION` | `7d` | Keep expired/composed correlations this long |
 | `APP_COMPOSITION_SWEEP_INTERVAL` | `60s` | Composition sweeper cadence (worker only) |
+| `APP_LEDGER_RETENTION` | `30d` | Keep dedup ledger entries this long (must exceed every stream's replay window) |
+| `APP_LEDGER_SWEEP_INTERVAL` | `1h` | Ledger sweeper cadence (worker only) |
 | `SERVER_PORT` | `8080` | HTTP port (api only) |
 
 ## Running locally
