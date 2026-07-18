@@ -1,0 +1,10 @@
+{
+  "source": "SOURCE_A",
+  "eventType": "ready.composed",
+  "dedupKey": "alpha:c-2",
+  "occurredAt": "2026-01-01T00:01:00Z",
+  "body": {
+    "x.ready": {"eventId": "x-2", "occurredAt": "2026-01-01T00:00:00Z", "correlationId": "c-2", "data": {"weight": 10}},
+    "y.ready": {"eventId": "y-2", "occurredAt": "2026-01-01T00:01:00Z", "correlationId": "c-2"}
+  }
+}
