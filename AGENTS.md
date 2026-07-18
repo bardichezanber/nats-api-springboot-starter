@@ -42,12 +42,14 @@ Tests run on in-memory H2 — no Docker, no database, no NATS needed.
    `record/`) has NO profile annotation. One deliberate exception:
    `IngestPipeline` is `@Profile("!gateway")` — the gateway boots without a
    database.
-7. Message handling semantics in consumers (do not reorder):
+7. Message handling semantics live ONLY in `BaseSourceConsumer.onMessage`
+   (final — never override it, never add a second `onMessage` path):
    - handled fine (any `IngestResult`) → `ack()`
    - `IllegalArgumentException` (malformed, poison) → `term()`
    - any other exception → `nak()`
    Metrics wrap these paths (poison counter on term) — keep the counters
-   when touching consumers.
+   if you ever touch the base class. Concrete consumers only implement
+   `source()` and `resolveNamespace(...)`.
 8. Do not add dependencies to `pom.xml` unless the task explicitly requires it.
 9. Do not rename packages, move files, or reformat code you were not asked to touch.
    Make the smallest change that completes the task.
@@ -68,7 +70,7 @@ Tests run on in-memory H2 — no Docker, no database, no NATS needed.
 src/main/java/com/example/ingest/
   namespace/            SHARED. NamespacePolicy (SPI), NamespaceRegistry,
                         NamespaceProperties, CommonEnvelope, SourceKey,
-                        CommonPayload + CommonPayloadReader
+                        CommonPayload + CommonPayloadReader, MessageHeaders
   namespace/policies/   One class per namespace (AlphaNamespacePolicy, ...)
   record/               SHARED. IngestedRecord entity + repository (the main table)
   worker/               WORKER ONLY. IngestPipeline, IngestResult,
@@ -78,7 +80,8 @@ src/main/java/com/example/ingest/
   worker/ledger/        Dedup ledger entity + repository
   worker/source/        Per-source namespace resolvers
   worker/nats/          NatsConfig, NatsProperties, SourceProperties,
-                        SourceConsumer (SPI), SourceRegistry,
+                        SourceConsumer (SPI), BaseSourceConsumer (owns
+                        ack/term/nak — hard rule 7), SourceRegistry,
                         NatsSubscriptionRunner, SourceAConsumer, SourceBConsumer
   api/                  API ONLY. NamespaceController, RecordResponse
   gateway/              GATEWAY ONLY. GatewayController + GatewayAuthenticator (SPI),
@@ -212,19 +215,71 @@ step 2 disagree — fix them; do not touch `ddl-auto`.
 
 Follow the SOURCE_A trail end to end; every step mirrors an existing class:
 
-1. Add the enum constant in `namespace/SourceKey.java` (with its kebab-case
-   config key, e.g. `SOURCE_C("source-c")`).
+1. Add the enum constant in `namespace/SourceKey.java` with its kebab-case
+   config key AND its subject prefix, e.g.
+   `SOURCE_C("source-c", "src-c.events.")`. The prefix is the single source
+   of truth — `SourceRegistry` rejects config whose subject disagrees.
 2. Add a source block under `app.nats.sources.source-c` in
-   `application-worker.yml` (stream, subject like `src-c.events.>`, durable),
-   and add `source-c` to the `APP_SOURCES_ENABLED` default in the same file.
+   `application-worker.yml` (stream, durable, and subject `src-c.events.>` —
+   must be the enum prefix + `>`), and add `source-c` to the
+   `APP_SOURCES_ENABLED` default in the same file.
 3. Write a resolver in `worker/source/` deciding the namespace from
-   header/body per the upstream contract (+ unit test).
-4. Copy `SourceAConsumer.java` → `SourceCConsumer.java` (it implements
-   `SourceConsumer`), adjust the subject prefix, header names, resolver call
-   and `source()` (+ test, copy `SourceAConsumerTest`).
-5. There is NO runner change: `SourceRegistry` discovers the consumer and
-   subscribes it if the key is enabled. It fails at startup if config and
-   beans disagree.
+   header/body per the upstream contract (+ unit test). One resolver class
+   per source, even if it is trivial — copy `SourceBNamespaceResolver` for
+   the header-declared case, `SourceANamespaceResolver` for derived logic.
+4. Consumer — `worker/nats/SourceCConsumer.java`, extending
+   `BaseSourceConsumer`. The base owns `onMessage` (ack/term/nak, hard
+   rule 7) and the envelope building; you implement ONLY the two methods
+   below (+ test, copy `SourceAConsumerTest`):
+
+```java
+package com.example.ingest.worker.nats;
+
+import com.example.ingest.namespace.CommonPayload;
+import com.example.ingest.namespace.CommonPayloadReader;
+import com.example.ingest.namespace.MessageHeaders;
+import com.example.ingest.namespace.SourceKey;
+import com.example.ingest.worker.IngestMetrics;
+import com.example.ingest.worker.composition.CompositionStage;
+import com.example.ingest.worker.source.SourceCNamespaceResolver;
+import io.nats.client.Message;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+/**
+ * Source C: subjects {@code src-c.events.<eventType>}; describe here how
+ * this source names its namespace.
+ */
+@Component
+@Profile("worker")
+public class SourceCConsumer extends BaseSourceConsumer {
+
+    private final SourceCNamespaceResolver namespaceResolver;
+
+    public SourceCConsumer(CommonPayloadReader payloadReader,
+                           SourceCNamespaceResolver namespaceResolver,
+                           CompositionStage compositionStage,
+                           IngestMetrics metrics) {
+        super(payloadReader, compositionStage, metrics);
+        this.namespaceResolver = namespaceResolver;
+    }
+
+    @Override
+    public SourceKey source() {
+        return SourceKey.SOURCE_C;
+    }
+
+    @Override
+    protected String resolveNamespace(Message message, CommonPayload payload) {
+        // Adapt to this source's contract; header(...) is a null-safe helper.
+        return namespaceResolver.resolve(header(message, MessageHeaders.NAMESPACE));
+    }
+}
+```
+
+5. There is NO runner or base-class change: `SourceRegistry` discovers the
+   consumer and subscribes it if the key is enabled. It fails at startup if
+   config and beans disagree.
 
 ## Troubleshooting
 
