@@ -183,9 +183,12 @@ and extend `SourceANamespaceResolverTest`.
    claimed event type, empty for everything else, `IllegalArgumentException`
    when the correlation field is missing.
 2. **Plan class** — `worker/composition/plans/<Ns><Flow>CompositionPolicy.java`
-   implementing `CompositionPolicy`. Claim ONLY your namespace + event types
-   (flows must be disjoint); return correlationKey/partKey/requiredParts/
-   timeout/composedEventType.
+   implementing `CompositionPolicy`. Declare your claim via `namespace()` +
+   `claimedEventTypes()` — flows must be disjoint, and `CompositionStage`
+   fails at startup if two policies claim the same (namespace, event type)
+   pair. `planFor` returns correlationKey/partKey/requiredParts/timeout/
+   composedEventType (or empty to pass a claimed event through, e.g. wrong
+   source).
 3. **Composed parse** — the owning `NamespacePolicy` handles the composed event
    type (body = `{partKey: partBody, ...}`); the event type string is duplicated
    there on purpose — namespace code must not import worker code (ArchUnit).

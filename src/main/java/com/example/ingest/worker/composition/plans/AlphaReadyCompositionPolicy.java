@@ -29,6 +29,16 @@ public class AlphaReadyCompositionPolicy implements CompositionPolicy {
     private static final Duration TIMEOUT = Duration.ofMinutes(15);
 
     @Override
+    public String namespace() {
+        return "alpha";
+    }
+
+    @Override
+    public Set<String> claimedEventTypes() {
+        return REQUIRED_PARTS;
+    }
+
+    @Override
     public Optional<CompositionPlan> planFor(String namespaceKey, CommonEnvelope envelope) {
         if (envelope.source() != SourceKey.SOURCE_A
                 || !"alpha".equals(namespaceKey)

@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,12 +56,29 @@ public class CompositionStage {
                             IngestPipeline pipeline,
                             CompositionMetrics metrics,
                             ObjectMapper objectMapper) {
+        requireDisjointClaims(policies);
         this.policies = policies;
         this.states = states;
         this.parts = parts;
         this.pipeline = pipeline;
         this.metrics = metrics;
         this.objectMapper = objectMapper;
+    }
+
+    /** Flows must be disjoint (see {@link CompositionPolicy}) — fail fast, not first-match-wins. */
+    private static void requireDisjointClaims(List<CompositionPolicy> policies) {
+        Map<String, String> claims = new HashMap<>();
+        for (CompositionPolicy policy : policies) {
+            for (String eventType : policy.claimedEventTypes()) {
+                String claim = policy.namespace() + ":" + eventType;
+                String other = claims.putIfAbsent(claim, policy.getClass().getName());
+                if (other != null) {
+                    throw new IllegalStateException("composition flows must be disjoint: ("
+                            + claim + ") is claimed by both " + other
+                            + " and " + policy.getClass().getName());
+                }
+            }
+        }
     }
 
     @Transactional
@@ -107,9 +126,9 @@ public class CompositionStage {
 
     private Optional<CompositionPlan> planFor(String namespaceKey, CommonEnvelope envelope) {
         for (CompositionPolicy policy : policies) {
-            Optional<CompositionPlan> plan = policy.planFor(namespaceKey, envelope);
-            if (plan.isPresent()) {
-                return plan;
+            if (policy.namespace().equals(namespaceKey)
+                    && policy.claimedEventTypes().contains(envelope.eventType())) {
+                return policy.planFor(namespaceKey, envelope);
             }
         }
         return Optional.empty();

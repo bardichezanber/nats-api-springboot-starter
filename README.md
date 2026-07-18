@@ -77,7 +77,8 @@ Malformed messages also increment the `ingest.poison` counter.
 
 Some flows only make sense once several events arrived. A `CompositionPolicy`
 (one class per flow, `worker/composition/plans/`) claims (namespace, event)
-pairs and maps them to a correlation; `CompositionStage` buffers claimed parts
+pairs and maps them to a correlation — claims must be disjoint, and
+`CompositionStage` refuses to start when two flows claim the same pair; `CompositionStage` buffers claimed parts
 (`IngestResult.BUFFERED` → still ACK — the DB owns the data from then on) and
 the **last part's transaction** builds one composed event
 (`body = {partKey: partBody}`, `dedupKey = <namespace>:<correlationKey>`) that
