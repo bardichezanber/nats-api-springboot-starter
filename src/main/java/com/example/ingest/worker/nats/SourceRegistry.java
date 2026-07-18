@@ -47,6 +47,12 @@ public class SourceRegistry {
             if (config == null) {
                 throw new IllegalStateException("Enabled source has no app.nats.sources entry: " + key);
             }
+            String expectedSubject = source.subjectPrefix() + ">";
+            if (!expectedSubject.equals(config.subject())) {
+                throw new IllegalStateException("app.nats.sources." + key + ".subject is '"
+                        + config.subject() + "' but source " + key + " consumes '" + expectedSubject
+                        + "' (SourceKey." + source + ".subjectPrefix())");
+            }
             resolved.add(new Subscription(source, config, consumer));
         }
         this.subscriptions = List.copyOf(resolved);

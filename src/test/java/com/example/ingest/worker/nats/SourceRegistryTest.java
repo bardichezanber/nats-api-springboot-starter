@@ -72,6 +72,18 @@ class SourceRegistryTest {
     }
 
     @Test
+    void failsFastWhenSubjectDoesNotMatchSourcePrefix() {
+        NatsProperties wrongSubject = new NatsProperties("nats://localhost:4222",
+                Map.of("source-a", new NatsProperties.SourceConfig("S_src-a", "src-b.events.>", "ingest-worker-src-a")));
+
+        assertThatThrownBy(() -> new SourceRegistry(
+                new SourceProperties(List.of("source-a")), wrongSubject, consumers))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("src-a.events.>")
+                .hasMessageContaining("src-b.events.>");
+    }
+
+    @Test
     void failsFastWhenEnabledSourceHasNoNatsConfig() {
         NatsProperties onlyA = new NatsProperties("nats://localhost:4222", Map.of("source-a", config("src-a")));
 

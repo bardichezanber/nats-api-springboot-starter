@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.util.Set;
 
 /**
  * Publishes to {@code src-http.events.*} / {@code src-ftp.events.*} with
@@ -21,9 +21,7 @@ import java.util.Map;
 @Profile("gateway")
 public class NatsEventPublisher implements EventPublisher {
 
-    static final Map<SourceKey, String> SUBJECT_PREFIXES = Map.of(
-            SourceKey.SOURCE_HTTP, "src-http.events.",
-            SourceKey.SOURCE_FTP, "src-ftp.events.");
+    private static final Set<SourceKey> GATEWAY_SOURCES = Set.of(SourceKey.SOURCE_HTTP, SourceKey.SOURCE_FTP);
 
     private final Connection connection;
     private final GatewayMetrics metrics;
@@ -35,12 +33,11 @@ public class NatsEventPublisher implements EventPublisher {
 
     @Override
     public void publish(GatewayEvent event) {
-        String prefix = SUBJECT_PREFIXES.get(event.source());
-        if (prefix == null) {
+        if (!GATEWAY_SOURCES.contains(event.source())) {
             throw new IllegalArgumentException("no gateway subject for source " + event.source());
         }
         NatsMessage message = NatsMessage.builder()
-                .subject(prefix + event.eventType())
+                .subject(event.source().subjectPrefix() + event.eventType())
                 .headers(new Headers()
                         .add("Nats-Msg-Id", event.dedupKey())
                         .add("X-Namespace", event.namespaceKey()))
