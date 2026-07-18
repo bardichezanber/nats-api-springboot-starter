@@ -3,7 +3,7 @@ package com.example.ingest.worker.nats;
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.IngestMetrics;
-import com.example.ingest.worker.IngestPipeline;
+import com.example.ingest.worker.composition.CompositionStage;
 import com.example.ingest.worker.IngestResult;
 import com.example.ingest.worker.source.CommonPayload;
 import com.example.ingest.worker.source.CommonPayloadReader;
@@ -29,16 +29,16 @@ public class SourceHttpConsumer implements SourceConsumer {
 
     private final CommonPayloadReader payloadReader;
     private final SourceHttpNamespaceResolver namespaceResolver;
-    private final IngestPipeline pipeline;
+    private final CompositionStage compositionStage;
     private final IngestMetrics metrics;
 
     public SourceHttpConsumer(CommonPayloadReader payloadReader,
                               SourceHttpNamespaceResolver namespaceResolver,
-                              IngestPipeline pipeline,
+                              CompositionStage compositionStage,
                               IngestMetrics metrics) {
         this.payloadReader = payloadReader;
         this.namespaceResolver = namespaceResolver;
-        this.pipeline = pipeline;
+        this.compositionStage = compositionStage;
         this.metrics = metrics;
     }
 
@@ -74,7 +74,7 @@ public class SourceHttpConsumer implements SourceConsumer {
                 payload.dedupKey(),
                 payload.occurredAt(),
                 payload.body());
-        return pipeline.ingest(namespaceKey, envelope);
+        return compositionStage.ingest(namespaceKey, envelope);
     }
 
     private static String eventType(String subject) {

@@ -3,7 +3,7 @@ package com.example.ingest.worker.nats;
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.IngestMetrics;
-import com.example.ingest.worker.IngestPipeline;
+import com.example.ingest.worker.composition.CompositionStage;
 import com.example.ingest.worker.IngestResult;
 import com.example.ingest.worker.source.CommonPayloadReader;
 import com.example.ingest.worker.source.SourceANamespaceResolver;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 class SourceAConsumerTest {
 
     private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
-    private final IngestPipeline pipeline = mock(IngestPipeline.class);
+    private final CompositionStage pipeline = mock(CompositionStage.class);
     private final SourceAConsumer consumer = new SourceAConsumer(
             new CommonPayloadReader(new ObjectMapper()), new SourceANamespaceResolver(), pipeline,
             new IngestMetrics(meterRegistry));
