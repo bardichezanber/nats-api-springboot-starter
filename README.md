@@ -56,6 +56,18 @@ Each namespace is a hand-written `NamespacePolicy` implementation (see
 collected — the worker ACKs and drops its messages, and the API returns 404 for it.
 `NamespaceRegistry` fails fast at startup if an enabled key has no policy.
 
+**The drop is not final while the stream retains.** ACK only advances the
+durable's cursor; on limits-based streams (this project's kind) the messages
+stay until `MaxAge`/`MaxBytes`. Enabling a namespace late therefore has a
+regret window = the stream's retention: to recover history, run a one-off
+backfill consumer on the source stream (`DeliverPolicy.ByStartTime` or
+`All`) and feed it through the worker — already-ingested messages dedup as
+DUPLICATE. Two rules when provisioning streams out-of-band for production
+(dev auto-creates them with **no limits**): set `MaxAge` to the longest
+"collect later" window the business may want, and keep any backfill window
+inside `APP_LEDGER_RETENTION` — replaying a message whose ledger entry was
+already swept NAK-loops on the record unique constraint.
+
 ## API
 
 ```
