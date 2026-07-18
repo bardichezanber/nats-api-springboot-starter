@@ -20,7 +20,12 @@ class AlphaReadyCompositionPolicyTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private CommonEnvelope envelope(String eventType, String json) throws JsonProcessingException {
-        return new CommonEnvelope(SourceKey.SOURCE_A, eventType, "e-1",
+        return envelope(SourceKey.SOURCE_A, eventType, json);
+    }
+
+    private CommonEnvelope envelope(SourceKey source, String eventType, String json)
+            throws JsonProcessingException {
+        return new CommonEnvelope(source, eventType, "e-1",
                 Instant.parse("2026-01-01T00:00:00Z"), objectMapper.readTree(json));
     }
 
@@ -44,6 +49,16 @@ class AlphaReadyCompositionPolicyTest {
         assertThat(policy.planFor("beta", envelope("x.ready", "{\"correlationId\":\"c-1\"}"))).isEmpty();
         assertThat(policy.planFor("beta", envelope("ready", "{}"))).isEmpty();
         assertThat(policy.planFor("alpha", envelope("orders.created", "{}"))).isEmpty();
+    }
+
+    @Test
+    void ignoresAlphaReadyEventsFromOtherSources() throws JsonProcessingException {
+        // The flow is scoped to route A: an x.ready reaching alpha via any
+        // other source passes through untouched (no correlationId required).
+        assertThat(policy.planFor("alpha",
+                envelope(SourceKey.SOURCE_B, "x.ready", "{\"data\":{}}"))).isEmpty();
+        assertThat(policy.planFor("alpha",
+                envelope(SourceKey.SOURCE_HTTP, "y.ready", "{\"data\":{}}"))).isEmpty();
     }
 
     @Test

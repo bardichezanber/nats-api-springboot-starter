@@ -94,6 +94,23 @@ class CompositionStageIntegrationTest {
     }
 
     @Test
+    void alphaEventFromRouteBIsNotPulledIntoTheComposition() throws JsonProcessingException {
+        CommonEnvelope routeB = new CommonEnvelope(SourceKey.SOURCE_B, "x.ready", "b-x-1",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                objectMapper.readTree("{\"data\":{\"weight\":10}}"));
+
+        assertThat(stage.ingest("alpha", routeB)).isEqualTo(IngestResult.SAVED);
+
+        assertThat(records.findAll()).singleElement().satisfies(saved -> {
+            assertThat(saved.getNamespaceKey()).isEqualTo("alpha");
+            assertThat(saved.getEventType()).isEqualTo("x.ready");
+            assertThat(saved.getSourceKey()).isEqualTo("SOURCE_B");
+        });
+        assertThat(states.count()).isZero();
+        assertThat(parts.count()).isZero();
+    }
+
+    @Test
     void betaSingleReadyEventPassesStraightThrough() throws JsonProcessingException {
         CommonEnvelope ready = envelope("ready", "b-1",
                 "{\"attributes\":[{\"name\":\"status\",\"value\":\"ok\"}]}");

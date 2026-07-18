@@ -1,6 +1,7 @@
 package com.example.ingest.worker.composition.plans;
 
 import com.example.ingest.namespace.CommonEnvelope;
+import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.composition.CompositionPlan;
 import com.example.ingest.worker.composition.CompositionPolicy;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -11,11 +12,13 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Example flow: alpha's record is only meaningful once BOTH halves arrived —
- * {@code x.ready} and {@code y.ready} carrying the same {@code correlationId}
- * body field. The composed event ({@code ready.composed}) is what alpha's
- * namespace policy parses. Beta's single {@code ready} event is deliberately
- * claimed by no policy: it passes straight through.
+ * Example flow, scoped to route A: alpha's record is only meaningful once
+ * BOTH halves arrived — {@code x.ready} and {@code y.ready} from source A
+ * carrying the same {@code correlationId} body field. The composed event
+ * ({@code ready.composed}) is what alpha's namespace policy parses.
+ * Everything this policy does not claim passes straight through untouched:
+ * alpha events from other sources (route B stays exactly as it was), and
+ * beta's single {@code ready} event.
  */
 @Component
 public class AlphaReadyCompositionPolicy implements CompositionPolicy {
@@ -27,7 +30,9 @@ public class AlphaReadyCompositionPolicy implements CompositionPolicy {
 
     @Override
     public Optional<CompositionPlan> planFor(String namespaceKey, CommonEnvelope envelope) {
-        if (!"alpha".equals(namespaceKey) || !REQUIRED_PARTS.contains(envelope.eventType())) {
+        if (envelope.source() != SourceKey.SOURCE_A
+                || !"alpha".equals(namespaceKey)
+                || !REQUIRED_PARTS.contains(envelope.eventType())) {
             return Optional.empty();
         }
         JsonNode correlationId = envelope.body().path("correlationId");
