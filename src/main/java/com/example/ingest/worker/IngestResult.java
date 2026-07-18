@@ -10,5 +10,7 @@ public enum IngestResult {
     SAVED,
     DUPLICATE,
     NAMESPACE_DISABLED,
-    UNKNOWN_NAMESPACE
+    UNKNOWN_NAMESPACE,
+    /** Composition part stored, waiting for the rest of its composition. */
+    BUFFERED
 }
