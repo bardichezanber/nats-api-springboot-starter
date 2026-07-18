@@ -73,6 +73,29 @@ There are no cross-namespace reads.
 
 Malformed messages also increment the `ingest.poison` counter.
 
+## Composition (N events -> one record)
+
+Some flows only make sense once several events arrived. A `CompositionPolicy`
+(one class per flow, `worker/composition/plans/`) claims (namespace, event)
+pairs and maps them to a correlation; `CompositionStage` buffers claimed parts
+(`IngestResult.BUFFERED` → still ACK — the DB owns the data from then on) and
+the **last part's transaction** builds one composed event
+(`body = {partKey: partBody}`, `dedupKey = <namespace>:<correlationKey>`) that
+runs through the normal pipeline. Unclaimed events pass through untouched.
+
+Example: alpha needs `x.ready` **and** `y.ready` (same `correlationId`) before
+one `ready.composed` event is parsed; beta ingests a single `ready` event
+directly because no policy claims it.
+
+State machine: `PENDING -> COMPOSED | EXPIRED`, nothing else. Overdue
+correlations are **discarded** by the sweeper (metric + warn log, no partial
+ingest); expired/composed rows are kept for `APP_COMPOSITION_RETENTION`
+(default 7d) for troubleshooting. Concurrency: parts of one correlation
+serialize on a pessimistic state-row lock; the state PK, the
+`(correlation_key, part_key)` unique constraint, and the guarded
+COMPOSED-update are backstops, so races surface as DUPLICATE/redelivery,
+never as lost or doubled events.
+
 ## Scaling & monitoring
 
 Workers use durable **pull** consumers: every replica fetches from the same
@@ -83,7 +106,8 @@ Upgrading an existing environment: the old push consumers must be deleted
 
 `/actuator/prometheus` exposes Micrometer metrics tagged `source` /
 `namespace` / `result`: `ingest_messages_total`, `ingest_handle_seconds`,
-`ingest_poison_total` (worker) and `gateway_publish_total`,
+`ingest_poison_total`, `composition_active`, `composition_completed_total`,
+`composition_expired_total` (worker) and `gateway_publish_total`,
 `gateway_ftp_files_total`, `gateway_ftp_scan_lag_seconds` (gateway).
 
 ## Gateway role (HTTP + FTP sources)
@@ -122,6 +146,8 @@ worker ledger dedup replays). A publish failure leaves the file in
 | `APP_FTP_USERNAME` / `APP_FTP_PASSWORD` | — | FTP credentials |
 | `APP_FTP_INBOX_DIR` (+ `PROCESSING`/`ARCHIVE`/`ERROR`) | `/inbox` ... | FTP directories |
 | `APP_FTP_POLL_INTERVAL` | `30s` | FTP scan interval |
+| `APP_COMPOSITION_RETENTION` | `7d` | Keep expired/composed correlations this long |
+| `APP_COMPOSITION_SWEEP_INTERVAL` | `60s` | Composition sweeper cadence (worker only) |
 | `SERVER_PORT` | `8080` | HTTP port (api only) |
 
 ## Running locally

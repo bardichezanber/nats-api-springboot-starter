@@ -72,6 +72,8 @@ src/main/java/com/example/ingest/
   record/               SHARED. IngestedRecord entity + repository (the main table)
   worker/               WORKER ONLY. IngestPipeline, IngestResult,
                         IngestMetrics (source/namespace/result tag convention)
+  worker/composition/   CompositionStage + CompositionPolicy (SPI), state/part
+                        entities, sweeper; plans/ = one class per flow
   worker/ledger/        Dedup ledger entity + repository
   worker/source/        CommonPayloadReader + per-source namespace resolvers
   worker/nats/          NatsConfig, NatsProperties, SourceProperties,
@@ -91,8 +93,11 @@ src/test/resources/golden/<ns>/ golden contract files, one dir per namespace
 ```
 
 Data flow: NATS message → source consumer → resolver picks namespace →
-`IngestPipeline.ingest()` → ledger dedup → `NamespacePolicy.parse()`
+`CompositionStage.ingest()` (passthrough unless a `CompositionPolicy` claims the
+event; claimed events buffer until all parts arrive, then one composed envelope
+continues) → `IngestPipeline.ingest()` → ledger dedup → `NamespacePolicy.parse()`
 → `ingested_record` row. The API reads that same table, always scoped to one namespace.
+A buffered part returns `IngestResult.BUFFERED` — still an ACK (hard rule 7).
 The gateway (profile `gateway`) bridges HTTP posts and FTP files into
 `src-http.events.>` / `src-ftp.events.>` — it publishes only, never resolves
 namespaces, never touches the DB.
@@ -152,6 +157,22 @@ if tests need it. Deployments control the real list via `APP_NAMESPACES_ENABLED`
 If source A should route messages to the new namespace, also add the
 `(category, region)` mapping in `worker/source/SourceANamespaceResolver.java`
 and extend `SourceANamespaceResolverTest`.
+
+## Recipe: add a composition flow (N events -> one record)
+
+1. **Test first** — copy `AlphaReadyCompositionPolicyTest`: plan fields for each
+   claimed event type, empty for everything else, `IllegalArgumentException`
+   when the correlation field is missing.
+2. **Plan class** — `worker/composition/plans/<Ns><Flow>CompositionPolicy.java`
+   implementing `CompositionPolicy`. Claim ONLY your namespace + event types
+   (flows must be disjoint); return correlationKey/partKey/requiredParts/
+   timeout/composedEventType.
+3. **Composed parse** — the owning `NamespacePolicy` handles the composed event
+   type (body = `{partKey: partBody, ...}`); the event type string is duplicated
+   there on purpose — namespace code must not import worker code (ArchUnit).
+4. **Golden files** — add the composed happy + invalid cases under
+   `golden/<your-namespace>/` only.
+No stage, schema, or consumer changes — `CompositionStage` picks up the plan bean.
 
 ## Recipe: change the schema (add a column)
 
