@@ -1,5 +1,6 @@
 package com.example.ingest.worker.nats;
 
+import com.example.ingest.namespace.MessageHeaders;
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.IngestMetrics;
@@ -35,7 +36,7 @@ class SourceFtpConsumerTest {
     void usesTheDeclaredNamespaceFromTheHeader() {
         Message message = NatsMessage.builder()
                 .subject("src-ftp.events.orders.created")
-                .headers(new Headers().add(SourceFtpConsumer.NAMESPACE_HEADER, "beta"))
+                .headers(new Headers().add(MessageHeaders.NAMESPACE, "beta"))
                 .data("""
                         {"eventId":"f-1","occurredAt":"2026-01-01T00:00:00Z",
                          "attributes":[{"name":"amount","value":7}]}
@@ -65,6 +66,6 @@ class SourceFtpConsumerTest {
 
         assertThatThrownBy(() -> consumer.handle(message))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(SourceFtpConsumer.NAMESPACE_HEADER);
+                .hasMessageContaining(MessageHeaders.NAMESPACE);
     }
 }

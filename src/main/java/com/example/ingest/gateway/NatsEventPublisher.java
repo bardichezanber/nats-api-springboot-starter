@@ -1,5 +1,6 @@
 package com.example.ingest.gateway;
 
+import com.example.ingest.namespace.MessageHeaders;
 import com.example.ingest.namespace.SourceKey;
 import io.nats.client.Connection;
 import io.nats.client.JetStreamApiException;
@@ -40,7 +41,7 @@ public class NatsEventPublisher implements EventPublisher {
                 .subject(event.source().subjectPrefix() + event.eventType())
                 .headers(new Headers()
                         .add("Nats-Msg-Id", event.dedupKey())
-                        .add("X-Namespace", event.namespaceKey()))
+                        .add(MessageHeaders.NAMESPACE, event.namespaceKey()))
                 .data(event.body().toString().getBytes(StandardCharsets.UTF_8))
                 .build();
         try {

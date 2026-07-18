@@ -1,5 +1,6 @@
 package com.example.ingest.worker.nats;
 
+import com.example.ingest.namespace.MessageHeaders;
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.IngestMetrics;
@@ -35,7 +36,7 @@ class SourceBConsumerTest {
     void usesTheDeclaredNamespaceFromTheHeader() {
         Message message = NatsMessage.builder()
                 .subject("src-b.events.shipments.updated")
-                .headers(new Headers().add(SourceBConsumer.NAMESPACE_HEADER, "beta"))
+                .headers(new Headers().add(MessageHeaders.NAMESPACE, "beta"))
                 .data("""
                         {"eventId":"e-9","occurredAt":"2026-02-01T00:00:00Z",
                          "attributes":[{"name":"amount","value":7}]}
@@ -65,6 +66,6 @@ class SourceBConsumerTest {
 
         assertThatThrownBy(() -> consumer.handle(message))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(SourceBConsumer.NAMESPACE_HEADER);
+                .hasMessageContaining(MessageHeaders.NAMESPACE);
     }
 }

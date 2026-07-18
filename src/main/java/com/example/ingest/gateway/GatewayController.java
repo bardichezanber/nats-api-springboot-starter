@@ -1,5 +1,6 @@
 package com.example.ingest.gateway;
 
+import com.example.ingest.namespace.MessageHeaders;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.namespace.CommonPayload;
 import com.example.ingest.namespace.CommonPayloadReader;
@@ -27,7 +28,6 @@ import java.util.regex.Pattern;
 @Profile("gateway")
 public class GatewayController {
 
-    public static final String NAMESPACE_HEADER = "X-Namespace";
     private static final Pattern EVENT_TYPE = Pattern.compile("[A-Za-z0-9._-]+");
 
     private final GatewayAuthenticator authenticator;
@@ -45,7 +45,7 @@ public class GatewayController {
     @PostMapping("/gateway/events/{eventType}")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Map<String, String> publish(@PathVariable String eventType,
-                                       @RequestHeader(value = NAMESPACE_HEADER, required = false) String namespace,
+                                       @RequestHeader(value = MessageHeaders.NAMESPACE, required = false) String namespace,
                                        @RequestBody byte[] body,
                                        HttpServletRequest request) {
         if (!authenticator.authenticate(request)) {
@@ -55,7 +55,7 @@ public class GatewayController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid event type");
         }
         if (namespace == null || namespace.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "missing " + NAMESPACE_HEADER + " header");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "missing " + MessageHeaders.NAMESPACE + " header");
         }
         CommonPayload payload;
         try {

@@ -1,6 +1,7 @@
 package com.example.ingest.worker.nats;
 
 import com.example.ingest.namespace.CommonEnvelope;
+import com.example.ingest.namespace.MessageHeaders;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.IngestMetrics;
 import com.example.ingest.worker.composition.CompositionStage;
@@ -23,8 +24,6 @@ import org.springframework.stereotype.Component;
 public class SourceHttpConsumer implements SourceConsumer {
 
     public static final String SUBJECT_PREFIX = "src-http.events.";
-    public static final String NAMESPACE_HEADER = "X-Namespace";
-
     private static final Logger log = LoggerFactory.getLogger(SourceHttpConsumer.class);
 
     private final CommonPayloadReader payloadReader;
@@ -66,7 +65,7 @@ public class SourceHttpConsumer implements SourceConsumer {
 
     IngestResult handle(Message message) {
         CommonPayload payload = payloadReader.read(message.getData());
-        String header = message.getHeaders() == null ? null : message.getHeaders().getFirst(NAMESPACE_HEADER);
+        String header = message.getHeaders() == null ? null : message.getHeaders().getFirst(MessageHeaders.NAMESPACE);
         String namespaceKey = namespaceResolver.resolve(header);
         CommonEnvelope envelope = new CommonEnvelope(
                 source(),
