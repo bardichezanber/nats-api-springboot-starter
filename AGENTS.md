@@ -94,6 +94,9 @@ src/main/resources/
   db/migration/V1__init.sql     schema (append V2, V3, ... — never edit V1)
 src/test/java/...               mirrors main; src/test/resources/application.yml = H2
 src/test/resources/golden/<ns>/ golden contract files, one dir per namespace
+deploy/k8s/                     kustomize: base/{worker,gateway} + one overlay per
+                                route + monitoring; no build impact. Rules and the
+                                add-a-route recipe live in deploy/k8s/README.md
 ```
 
 Data flow: NATS message → source consumer → resolver picks namespace →
