@@ -32,6 +32,10 @@ public class CompositionState {
     @Column(name = "required_parts", nullable = false)
     private String requiredParts;
 
+    // Nullable: rows created before V4 expire without a marker record.
+    @Column(name = "composed_event_type")
+    private String composedEventType;
+
     @Column(name = "deadline_at", nullable = false)
     private Instant deadlineAt;
 
@@ -45,11 +49,13 @@ public class CompositionState {
     }
 
     public CompositionState(String correlationKey, String namespaceKey, CompositionStatus status,
-                            String requiredParts, Instant deadlineAt, Instant createdAt) {
+                            String requiredParts, String composedEventType,
+                            Instant deadlineAt, Instant createdAt) {
         this.correlationKey = correlationKey;
         this.namespaceKey = namespaceKey;
         this.status = status;
         this.requiredParts = requiredParts;
+        this.composedEventType = composedEventType;
         this.deadlineAt = deadlineAt;
         this.createdAt = createdAt;
     }
@@ -68,6 +74,10 @@ public class CompositionState {
 
     public String getRequiredParts() {
         return requiredParts;
+    }
+
+    public String getComposedEventType() {
+        return composedEventType;
     }
 
     public Instant getDeadlineAt() {

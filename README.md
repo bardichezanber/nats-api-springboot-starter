@@ -94,9 +94,18 @@ one `ready.composed` event is parsed; beta ingests a single `ready` event
 directly because no policy claims it.
 
 State machine: `PENDING -> COMPOSED | EXPIRED`, nothing else. Overdue
-correlations are **discarded** by the sweeper (metric + warn log, no partial
-ingest); expired/composed rows are kept for `APP_COMPOSITION_RETENTION`
-(default 7d) for troubleshooting. Concurrency: parts of one correlation
+correlations are **discarded** by the sweeper — no partial ingest — but the
+expiry is recorded as data: the arrived parts are ingested as a
+`<composedEventType>.expired` marker (body `{"parts": {...}, "missing":
+[...]}`, dedupKey `<correlation>:expired`), queryable through the namespace
+API. The marker is best-effort: it needs the owning `NamespacePolicy` to
+handle the type (see `AlphaNamespacePolicy`); without that branch the flow
+expires with only the metric + warn log. Expired/composed rows are kept for
+`APP_COMPOSITION_RETENTION` (default 7d) for troubleshooting.
+Redrive (runbook): within retention, set the state row back
+(`UPDATE composition_state SET status='PENDING', deadline_at=<new deadline>
+WHERE correlation_key=...`) and re-send the missing part — the flow then
+composes normally; the marker record stays as the audit trail. Concurrency: parts of one correlation
 serialize on a pessimistic state-row lock; the state PK, the
 `(correlation_key, part_key)` unique constraint, and the guarded
 COMPOSED-update are backstops, so races surface as DUPLICATE/redelivery,

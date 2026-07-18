@@ -22,6 +22,7 @@ public class AlphaNamespacePolicy implements NamespacePolicy {
 
     public static final String KEY = "alpha";
     public static final String READY_COMPOSED_EVENT_TYPE = "ready.composed";
+    public static final String READY_EXPIRED_EVENT_TYPE = READY_COMPOSED_EVENT_TYPE + ".expired";
 
     @Override
     public String key() {
@@ -32,6 +33,9 @@ public class AlphaNamespacePolicy implements NamespacePolicy {
     public JsonNode parse(CommonEnvelope envelope) {
         if (READY_COMPOSED_EVENT_TYPE.equals(envelope.eventType())) {
             return parseReadyComposed(envelope.body());
+        }
+        if (READY_EXPIRED_EVENT_TYPE.equals(envelope.eventType())) {
+            return parseReadyExpired(envelope.body());
         }
         JsonNode data = envelope.body().path("data");
         if (!data.isObject()) {
@@ -51,5 +55,29 @@ public class AlphaNamespacePolicy implements NamespacePolicy {
         merged.setAll((ObjectNode) x);
         merged.setAll((ObjectNode) y);
         return merged;
+    }
+
+    /**
+     * Expiry marker from the sweeper: whatever parts arrived, plus which are
+     * missing. Best-effort by nature — merge the {@code data} of every part
+     * that has one, and keep the {@code missing} list for ops.
+     */
+    private static JsonNode parseReadyExpired(JsonNode body) {
+        JsonNode missing = body.path("missing");
+        if (!missing.isArray()) {
+            throw new IllegalArgumentException(
+                    "alpha " + READY_EXPIRED_EVENT_TYPE + " requires a 'missing' array");
+        }
+        ObjectNode partial = JsonNodeFactory.instance.objectNode();
+        body.path("parts").properties().forEach(part -> {
+            JsonNode data = part.getValue().path("data");
+            if (data.isObject()) {
+                partial.setAll((ObjectNode) data);
+            }
+        });
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
+        result.set("missing", missing);
+        result.set("partial", partial);
+        return result;
     }
 }

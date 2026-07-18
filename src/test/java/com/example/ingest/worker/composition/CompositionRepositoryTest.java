@@ -31,7 +31,7 @@ class CompositionRepositoryTest {
 
     private CompositionState pending(String key, Instant createdAt) {
         return new CompositionState(key, "alpha", CompositionStatus.PENDING,
-                "x.ready,y.ready", createdAt.plusSeconds(900), createdAt);
+                "x.ready,y.ready", "ready.composed", createdAt.plusSeconds(900), createdAt);
     }
 
     @Test

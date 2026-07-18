@@ -187,8 +187,10 @@ class CompositionStressTest {
         for (int round = 0; round < ROUNDS; round++) {
             String correlationId = "exp-" + round;
             String key = "alpha:" + correlationId;
+            // composedEventType null: this test counts records, and an expiry
+            // marker would blur the one-outcome-per-round assertion.
             states.save(new CompositionState(key, "alpha", CompositionStatus.PENDING,
-                    "x.ready,y.ready", Instant.now().minusSeconds(1), Instant.now()));
+                    "x.ready,y.ready", null, Instant.now().minusSeconds(1), Instant.now()));
             parts.save(new CompositionPart(key, "x.ready", "SOURCE_A", "x.ready",
                     "{\"correlationId\":\"" + correlationId + "\",\"data\":{\"x\":1}}",
                     Instant.parse("2026-01-01T00:00:00Z"), Instant.now()));

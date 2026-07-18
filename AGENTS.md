@@ -195,6 +195,11 @@ and extend `SourceANamespaceResolverTest`.
    there on purpose — namespace code must not import worker code (ArchUnit).
 4. **Golden files** — add the composed happy + invalid cases under
    `golden/<your-namespace>/` only.
+5. **Optional: queryable expiry** — handle `<composedEventType>.expired`
+   in the owning `NamespacePolicy` (body = `{"parts": {...}, "missing":
+   [...]}`; copy `AlphaNamespacePolicy.parseReadyExpired`) + golden files.
+   Without this branch the flow still expires safely, but only with
+   metric + log — the sweeper's marker ingest is best-effort.
 No stage, schema, or consumer changes — `CompositionStage` picks up the plan bean.
 
 ## Recipe: change the schema (add a column)

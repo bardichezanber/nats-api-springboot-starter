@@ -59,7 +59,8 @@ class CompositionStageComposedSourceTest {
         // The x part arrived first from SOURCE_A; the trigger is the later
         // y part from SOURCE_B.
         CompositionState pending = new CompositionState("alpha:c-1", "alpha",
-                CompositionStatus.PENDING, "x.ready,y.ready", LATER.plusSeconds(900), EARLIER);
+                CompositionStatus.PENDING, "x.ready,y.ready", "combo.composed",
+                LATER.plusSeconds(900), EARLIER);
         when(states.findWithLockingByCorrelationKey("alpha:c-1")).thenReturn(Optional.of(pending));
         when(parts.existsByCorrelationKeyAndPartKey("alpha:c-1", "y.ready")).thenReturn(false);
         when(parts.findByCorrelationKey("alpha:c-1")).thenReturn(List.of(

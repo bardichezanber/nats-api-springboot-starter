@@ -1,0 +1,12 @@
+{
+  "source": "SOURCE_A",
+  "eventType": "ready.composed.expired",
+  "dedupKey": "alpha:c-9:expired",
+  "occurredAt": "2026-01-01T00:20:00Z",
+  "body": {
+    "parts": {
+      "x.ready": {"eventId": "x-1", "occurredAt": "2026-01-01T00:00:00Z", "correlationId": "c-9", "data": {"weight": 10}}
+    },
+    "missing": ["y.ready"]
+  }
+}

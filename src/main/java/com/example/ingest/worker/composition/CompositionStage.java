@@ -96,8 +96,8 @@ public class CompositionStage {
             // PK is the backstop for a concurrent first part: the loser fails
             // at flush, is NAKed, and the redelivery sees the row.
             states.saveAndFlush(new CompositionState(key, namespaceKey, CompositionStatus.PENDING,
-                    String.join(",", plan.requiredPartKeys()), Instant.now().plus(plan.timeout()),
-                    Instant.now()));
+                    String.join(",", plan.requiredPartKeys()), plan.composedEventType(),
+                    Instant.now().plus(plan.timeout()), Instant.now()));
         } else if (state.get().getStatus() != CompositionStatus.PENDING) {
             log.debug("dropping part {} for {} correlation {}", plan.partKey(),
                     state.get().getStatus(), key);

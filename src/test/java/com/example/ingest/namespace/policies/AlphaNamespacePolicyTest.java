@@ -39,8 +39,35 @@ class AlphaNamespacePolicyTest {
                 .hasMessageContaining("data");
     }
 
+    @Test
+    void expiredMarkerMergesArrivedPartsAndListsTheMissingOnes() throws JsonProcessingException {
+        CommonEnvelope envelope = envelope("ready.composed.expired", """
+                {"parts":{"x.ready":{"correlationId":"c-1","data":{"weight":10}}},"missing":["y.ready"]}
+                """);
+
+        JsonNode parsed = policy.parse(envelope);
+
+        assertThat(parsed.get("partial").get("weight").asInt()).isEqualTo(10);
+        assertThat(parsed.get("missing").get(0).asText()).isEqualTo("y.ready");
+    }
+
+    @Test
+    void rejectsExpiredMarkerWithoutAMissingList() throws JsonProcessingException {
+        CommonEnvelope envelope = envelope("ready.composed.expired", """
+                {"parts":{"x.ready":{"correlationId":"c-1","data":{"weight":10}}}}
+                """);
+
+        assertThatThrownBy(() -> policy.parse(envelope))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("missing");
+    }
+
     private CommonEnvelope envelope(String json) throws JsonProcessingException {
-        return new CommonEnvelope(SourceKey.SOURCE_A, "orders.created", "e-1",
+        return envelope("orders.created", json);
+    }
+
+    private CommonEnvelope envelope(String eventType, String json) throws JsonProcessingException {
+        return new CommonEnvelope(SourceKey.SOURCE_A, eventType, "e-1",
                 Instant.parse("2026-01-01T00:00:00Z"), objectMapper.readTree(json));
     }
 }
