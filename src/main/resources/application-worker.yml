@@ -1,4 +1,7 @@
 app:
+  composition:
+    retention: ${APP_COMPOSITION_RETENTION:7d}
+    sweep-interval: ${APP_COMPOSITION_SWEEP_INTERVAL:60s}
   sources:
     # Switch semantics: this worker subscribes only the sources listed here.
     # Deployments set APP_SOURCES_ENABLED per route (e.g. "source-a").
