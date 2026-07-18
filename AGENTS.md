@@ -67,7 +67,8 @@ Tests run on in-memory H2 — no Docker, no database, no NATS needed.
 ```
 src/main/java/com/example/ingest/
   namespace/            SHARED. NamespacePolicy (SPI), NamespaceRegistry,
-                        NamespaceProperties, CommonEnvelope, SourceKey
+                        NamespaceProperties, CommonEnvelope, SourceKey,
+                        CommonPayload + CommonPayloadReader
   namespace/policies/   One class per namespace (AlphaNamespacePolicy, ...)
   record/               SHARED. IngestedRecord entity + repository (the main table)
   worker/               WORKER ONLY. IngestPipeline, IngestResult,
@@ -75,7 +76,7 @@ src/main/java/com/example/ingest/
   worker/composition/   CompositionStage + CompositionPolicy (SPI), state/part
                         entities, sweeper; plans/ = one class per flow
   worker/ledger/        Dedup ledger entity + repository
-  worker/source/        CommonPayloadReader + per-source namespace resolvers
+  worker/source/        Per-source namespace resolvers
   worker/nats/          NatsConfig, NatsProperties, SourceProperties,
                         SourceConsumer (SPI), SourceRegistry,
                         NatsSubscriptionRunner, SourceAConsumer, SourceBConsumer

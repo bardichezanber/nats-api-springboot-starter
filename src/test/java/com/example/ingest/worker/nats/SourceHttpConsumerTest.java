@@ -5,7 +5,7 @@ import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.IngestMetrics;
 import com.example.ingest.worker.composition.CompositionStage;
 import com.example.ingest.worker.IngestResult;
-import com.example.ingest.worker.source.CommonPayloadReader;
+import com.example.ingest.namespace.CommonPayloadReader;
 import com.example.ingest.worker.source.SourceHttpNamespaceResolver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;

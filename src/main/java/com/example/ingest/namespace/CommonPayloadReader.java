@@ -1,4 +1,4 @@
-package com.example.ingest.worker.source;
+package com.example.ingest.namespace;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

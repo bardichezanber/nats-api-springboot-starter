@@ -1,8 +1,8 @@
 package com.example.ingest.gateway;
 
 import com.example.ingest.namespace.SourceKey;
-import com.example.ingest.worker.source.CommonPayload;
-import com.example.ingest.worker.source.CommonPayloadReader;
+import com.example.ingest.namespace.CommonPayload;
+import com.example.ingest.namespace.CommonPayloadReader;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
