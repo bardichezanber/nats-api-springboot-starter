@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingest-gateway
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: gateway
+          env:
+            - name: APP_FTP_ENABLED
+              value: "true"
+            - name: APP_FTP_HOST
+              value: ftp.example.internal
+            - name: APP_FTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ingest-ftp
+                  key: username
+            - name: APP_FTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ingest-ftp
+                  key: password

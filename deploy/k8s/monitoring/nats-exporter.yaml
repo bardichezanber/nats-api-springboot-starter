@@ -1,0 +1,54 @@
+# prometheus-nats-exporter: turns the NATS monitoring endpoint (:8222) into
+# Prometheus metrics — per-(stream, durable) num_pending / num_redelivered.
+# The same numbers KEDA scales on; graph pending and replica count together.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nats-exporter
+  labels:
+    app.kubernetes.io/name: nats-exporter
+    app.kubernetes.io/part-of: nats-ingest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nats-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nats-exporter
+        app.kubernetes.io/part-of: nats-ingest
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "7777"
+    spec:
+      containers:
+        - name: exporter
+          image: natsio/prometheus-nats-exporter:latest
+          args:
+            - -jsz=all
+            - http://nats.nats.svc:8222
+          ports:
+            - name: metrics
+              containerPort: 7777
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nats-exporter
+  labels:
+    app.kubernetes.io/name: nats-exporter
+    app.kubernetes.io/part-of: nats-ingest
+spec:
+  selector:
+    app.kubernetes.io/name: nats-exporter
+  ports:
+    - name: metrics
+      port: 7777
+      targetPort: metrics

@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingest-worker
+  labels:
+    app.kubernetes.io/name: ingest-worker
+    app.kubernetes.io/part-of: nats-ingest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingest-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ingest-worker
+        app.kubernetes.io/part-of: nats-ingest
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /actuator/prometheus
+    spec:
+      containers:
+        - name: worker
+          # TODO(deploy): point at your registry/tag; one image serves every role.
+          image: nats-api-springboot-starter:latest
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: worker
+            # Each route overlay overrides this list. Rule: one (stream, durable)
+            # pair belongs to exactly ONE Deployment — see deploy/k8s/README.md.
+            - name: APP_SOURCES_ENABLED
+              value: source-a,source-b,source-http,source-ftp
+            - name: NATS_URL
+              value: nats://nats.nats.svc:4222
+            - name: DB_URL
+              value: jdbc:mariadb://mariadb.db.svc:3306/ingest
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: ingest-db
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ingest-db
+                  key: password
+            - name: APP_NAMESPACES_ENABLED
+              value: alpha,beta
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 30
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi

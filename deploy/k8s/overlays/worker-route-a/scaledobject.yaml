@@ -1,0 +1,21 @@
+# Requires KEDA installed in the cluster (keda.sh). Scales this route on the
+# pending count of ITS OWN durable — each route watches only its own lag.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ingest-worker
+spec:
+  scaleTargetRef:
+    # Post-nameSuffix Deployment name: kustomize does not rewrite refs inside
+    # custom resources, so spell out the final name.
+    name: ingest-worker-route-a
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  triggers:
+    - type: nats-jetstream
+      metadata:
+        natsServerMonitoringEndpoint: "nats.nats.svc:8222"
+        account: "$G"
+        stream: "SRC_A_EVENTS"
+        consumer: "ingest-worker-src-a"
+        lagThreshold: "100"

@@ -1,0 +1,28 @@
+# Multi-source route: one trigger per consumed durable; KEDA scales on the
+# largest demand across triggers.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ingest-worker
+spec:
+  scaleTargetRef:
+    # Post-nameSuffix Deployment name: kustomize does not rewrite refs inside
+    # custom resources, so spell out the final name.
+    name: ingest-worker-route-ab
+  minReplicaCount: 1
+  maxReplicaCount: 10
+  triggers:
+    - type: nats-jetstream
+      metadata:
+        natsServerMonitoringEndpoint: "nats.nats.svc:8222"
+        account: "$G"
+        stream: "SRC_A_EVENTS"
+        consumer: "ingest-worker-src-a"
+        lagThreshold: "100"
+    - type: nats-jetstream
+      metadata:
+        natsServerMonitoringEndpoint: "nats.nats.svc:8222"
+        account: "$G"
+        stream: "SRC_B_EVENTS"
+        consumer: "ingest-worker-src-b"
+        lagThreshold: "100"

@@ -1,0 +1,70 @@
+# Starter alert set (spec §5.3). Requires prometheus-operator (PrometheusRule
+# CRD). App metrics come from /actuator/prometheus (source/namespace/result
+# tags); NATS-side metrics from nats-exporter.yaml — those metric names vary
+# by exporter version, so verify them against your exporter before relying
+# on the two NATS alerts. Thresholds are deliberately conservative defaults.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nats-ingest-alerts
+  labels:
+    app.kubernetes.io/part-of: nats-ingest
+spec:
+  groups:
+    - name: ingest-app
+      rules:
+        - alert: IngestPoisonMessages
+          # Any term()'d message means the upstream payload contract broke.
+          expr: sum by (source) (increase(ingest_poison_total[10m])) > 0
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "poison messages on source {{ $labels.source }} — upstream contract changed, manual intervention"
+        - alert: CompositionExpiredRatioHigh
+          # Expired vs completed is the main health signal of the compose flow.
+          expr: |
+            sum by (namespace) (increase(composition_expired_total[30m]))
+              / clamp_min(sum by (namespace) (increase(composition_completed_total[30m])), 1) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "namespace {{ $labels.namespace }} composition expiry ratio > 5% — missing parts upstream or timeout too short"
+        - alert: FtpScanLagHigh
+          # Oldest unprocessed file age; tune to the file SLA.
+          expr: gateway_ftp_scan_lag_seconds > 900
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "FTP inbox lag over 15m — upstream FTP down or poller stuck"
+        - alert: IngestSilentRoute
+          # A (source, namespace) pair that stops SAVING without errors is a
+          # silent failure. Scope/threshold per route in your overlay values.
+          expr: sum by (source, namespace) (increase(ingest_messages_total{result="SAVED"}[1h])) == 0
+          for: 1h
+          labels:
+            severity: info
+          annotations:
+            summary: "no SAVED records for {{ $labels.source }}/{{ $labels.namespace }} in 2h — silent failure or legitimately idle"
+    - name: ingest-nats
+      rules:
+        - alert: ConsumerLagAtMaxReplicas
+          # TODO(deploy): metric names depend on the exporter version — check
+          # your exporter's /metrics for the jetstream consumer pending gauge.
+          expr: |
+            jetstream_consumer_num_pending > 1000
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "durable {{ $labels.consumer_name }} pending keeps growing — consumers at max or DB slow"
+        - alert: RedeliveryChurn
+          # nak() loops show up as redelivery growth: DB or transient-failure cycle.
+          expr: increase(jetstream_consumer_num_redelivered[10m]) > 100
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "redelivery churn on {{ $labels.consumer_name }} — nak loop, check DB health"

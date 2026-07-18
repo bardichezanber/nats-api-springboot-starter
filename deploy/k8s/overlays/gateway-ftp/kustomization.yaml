@@ -1,0 +1,9 @@
+# FTP-polling gateway. The poller's claim-by-rename lock supports multiple
+# replicas, but one replica is usually enough for a file source.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+nameSuffix: -ftp
+resources:
+  - ../../base/gateway
+patches:
+  - path: ftp-patch.yaml

@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingest-worker
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          env:
+            - name: APP_SOURCES_ENABLED
+              value: source-a

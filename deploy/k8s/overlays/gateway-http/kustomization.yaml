@@ -1,0 +1,8 @@
+# Plain HTTP gateway: FTP poller stays disabled (the application default).
+# Scale with a normal HPA on CPU/RPS if needed — no KEDA here, the gateway
+# has no consumer lag to watch.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+nameSuffix: -http
+resources:
+  - ../../base/gateway
