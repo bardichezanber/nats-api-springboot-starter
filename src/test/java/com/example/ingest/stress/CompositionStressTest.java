@@ -12,8 +12,8 @@ import com.example.ingest.worker.composition.CompositionStage;
 import com.example.ingest.worker.composition.CompositionStatus;
 import com.example.ingest.worker.composition.CompositionSweeper;
 import com.example.ingest.worker.ledger.IngestLedgerRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -96,7 +96,7 @@ class CompositionStressTest {
                     eventType + "-" + correlationId, Instant.parse("2026-01-01T00:00:00Z"),
                     objectMapper.readTree("{\"correlationId\":\"" + correlationId
                             + "\",\"data\":{\"" + eventType.charAt(0) + "\":1}}"));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -243,7 +243,7 @@ class CompositionStressTest {
             ready = new CommonEnvelope(SourceKey.SOURCE_B, "ready", "same-key",
                     Instant.parse("2026-01-01T00:00:00Z"),
                     objectMapper.readTree("{\"attributes\":[{\"name\":\"s\",\"value\":\"ok\"}]}"));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException(e);
         }
         CyclicBarrier barrier = new CyclicBarrier(THREADS);

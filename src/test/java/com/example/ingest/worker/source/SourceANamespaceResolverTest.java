@@ -1,8 +1,8 @@
 package com.example.ingest.worker.source;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,7 +14,7 @@ class SourceANamespaceResolverTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void combinesCategoryHeaderAndCommonRegionField() throws JsonProcessingException {
+    void combinesCategoryHeaderAndCommonRegionField() throws JacksonException {
         assertThat(resolver.resolve("orders", objectMapper.readTree("{\"region\":\"emea\"}")))
                 .isEqualTo("alpha");
         assertThat(resolver.resolve("orders", objectMapper.readTree("{\"region\":\"apac\"}")))
@@ -22,7 +22,7 @@ class SourceANamespaceResolverTest {
     }
 
     @Test
-    void pinsTheFullRoutingTable() throws JsonProcessingException {
+    void pinsTheFullRoutingTable() throws JacksonException {
         // Append-only. Every known (category, region) -> namespace row is listed;
         // adding a namespace adds rows, editing a row changes another namespace's traffic.
         assertThat(resolver.resolve("orders", region("emea"))).isEqualTo("alpha");
@@ -30,12 +30,12 @@ class SourceANamespaceResolverTest {
         assertThat(resolver.resolve("orders", region("apac"))).isEqualTo("beta");
     }
 
-    private JsonNode region(String region) throws JsonProcessingException {
+    private JsonNode region(String region) throws JacksonException {
         return objectMapper.readTree("{\"region\":\"" + region + "\"}");
     }
 
     @Test
-    void rejectsMissingCategoryHeader() throws JsonProcessingException {
+    void rejectsMissingCategoryHeader() throws JacksonException {
         var body = objectMapper.readTree("{\"region\":\"emea\"}");
 
         assertThatThrownBy(() -> resolver.resolve(null, body))
@@ -44,7 +44,7 @@ class SourceANamespaceResolverTest {
     }
 
     @Test
-    void rejectsMissingRegionField() throws JsonProcessingException {
+    void rejectsMissingRegionField() throws JacksonException {
         var body = objectMapper.readTree("{}");
 
         assertThatThrownBy(() -> resolver.resolve("orders", body))
@@ -53,7 +53,7 @@ class SourceANamespaceResolverTest {
     }
 
     @Test
-    void rejectsUnmappedCombination() throws JsonProcessingException {
+    void rejectsUnmappedCombination() throws JacksonException {
         var body = objectMapper.readTree("{\"region\":\"mars\"}");
 
         assertThatThrownBy(() -> resolver.resolve("orders", body))

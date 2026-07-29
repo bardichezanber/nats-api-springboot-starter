@@ -2,7 +2,7 @@ package com.example.ingest.gateway;
 
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.namespace.CommonPayloadReader;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;

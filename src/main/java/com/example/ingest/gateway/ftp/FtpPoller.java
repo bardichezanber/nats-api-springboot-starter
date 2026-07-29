@@ -6,8 +6,9 @@ import com.example.ingest.gateway.GatewayMetrics;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.namespace.CommonPayload;
 import com.example.ingest.namespace.CommonPayloadReader;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -116,7 +117,7 @@ public class FtpPoller {
         JsonNode node;
         try {
             node = objectMapper.readTree(bytes);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new IllegalArgumentException("line is not valid JSON", e);
         }
         JsonNode eventType = node.path("eventType");

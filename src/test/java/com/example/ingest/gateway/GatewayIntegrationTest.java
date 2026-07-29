@@ -3,18 +3,21 @@ package com.example.ingest.gateway;
 import io.nats.client.Connection;
 import io.nats.client.JetStream;
 import io.nats.client.Message;
+import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
+import javax.sql.DataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -36,6 +39,9 @@ class GatewayIntegrationTest {
 
     @Autowired
     private MockMvc mvc;
+
+    @Autowired
+    private ApplicationContext context;
 
     @MockitoBean
     private Connection connection;
@@ -63,6 +69,15 @@ class GatewayIntegrationTest {
         assertThat(message.getSubject()).isEqualTo("src-http.events.orders.created");
         assertThat(message.getHeaders().getFirst("Nats-Msg-Id")).isEqualTo("e-1");
         assertThat(message.getHeaders().getFirst("X-Namespace")).isEqualTo("alpha");
+    }
+
+    @Test
+    void bootsWithoutADatabase() {
+        // The excludes in application-gateway.yml name auto-configuration classes
+        // by string: a package rename upstream turns them into silent no-ops, so
+        // assert the outcome (no DataSource, no JPA) rather than the config text.
+        assertThat(context.getBeanNamesForType(DataSource.class)).isEmpty();
+        assertThat(context.getBeanNamesForType(EntityManagerFactory.class)).isEmpty();
     }
 
     @Test

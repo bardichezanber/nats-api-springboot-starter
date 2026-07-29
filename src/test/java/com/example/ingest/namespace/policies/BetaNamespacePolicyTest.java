@@ -2,9 +2,9 @@ package com.example.ingest.namespace.policies;
 
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -18,7 +18,7 @@ class BetaNamespacePolicyTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void normalizesAttributePairsIntoAnObject() throws JsonProcessingException {
+    void normalizesAttributePairsIntoAnObject() throws JacksonException {
         CommonEnvelope envelope = envelope("""
                 {"eventId":"e-1","occurredAt":"2026-01-01T00:00:00Z",
                  "attributes":[{"name":"amount","value":42},{"name":"currency","value":"usd"}]}
@@ -31,7 +31,7 @@ class BetaNamespacePolicyTest {
     }
 
     @Test
-    void rejectsPayloadWithoutAttributesArray() throws JsonProcessingException {
+    void rejectsPayloadWithoutAttributesArray() throws JacksonException {
         CommonEnvelope envelope = envelope("""
                 {"eventId":"e-1","occurredAt":"2026-01-01T00:00:00Z","data":{}}
                 """);
@@ -41,7 +41,7 @@ class BetaNamespacePolicyTest {
                 .hasMessageContaining("attributes");
     }
 
-    private CommonEnvelope envelope(String json) throws JsonProcessingException {
+    private CommonEnvelope envelope(String json) throws JacksonException {
         return new CommonEnvelope(SourceKey.SOURCE_B, "orders.created", "e-1",
                 Instant.parse("2026-01-01T00:00:00Z"), objectMapper.readTree(json));
     }

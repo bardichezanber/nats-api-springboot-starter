@@ -4,7 +4,7 @@ import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.composition.CompositionPlan;
 import com.example.ingest.worker.composition.CompositionPolicy;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;

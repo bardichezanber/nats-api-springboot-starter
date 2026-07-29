@@ -1,6 +1,6 @@
 package com.example.ingest.namespace;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
 

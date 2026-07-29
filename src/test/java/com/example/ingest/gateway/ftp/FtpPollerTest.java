@@ -5,7 +5,7 @@ import com.example.ingest.gateway.GatewayEvent;
 import com.example.ingest.gateway.GatewayMetrics;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.namespace.CommonPayloadReader;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 

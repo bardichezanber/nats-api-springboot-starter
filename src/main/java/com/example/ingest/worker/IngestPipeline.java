@@ -7,7 +7,7 @@ import com.example.ingest.record.IngestedRecord;
 import com.example.ingest.record.IngestedRecordRepository;
 import com.example.ingest.worker.ledger.IngestLedgerEntry;
 import com.example.ingest.worker.ledger.IngestLedgerRepository;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;

@@ -4,8 +4,8 @@ import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.record.IngestedRecordRepository;
 import com.example.ingest.worker.IngestResult;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,7 @@ class CompositionSweeperIntegrationTest {
     private static final Instant OLD = Instant.parse("2020-01-01T00:00:00Z");
 
     @Test
-    void overduePendingStatesExpireAndLatePartsAreDropped() throws JsonProcessingException {
+    void overduePendingStatesExpireAndLatePartsAreDropped() throws JacksonException {
         // Deadline already passed, but the row is fresh — expired by this sweep,
         // not yet removed by retention.
         states.save(new CompositionState("alpha:late", "alpha", CompositionStatus.PENDING,

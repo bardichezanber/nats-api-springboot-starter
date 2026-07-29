@@ -4,8 +4,8 @@ import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.record.IngestedRecordRepository;
 import com.example.ingest.worker.ledger.IngestLedgerRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +40,7 @@ class IngestPipelineIntegrationTest {
     }
 
     @Test
-    void savesRecordAndLedgerEntryForEnabledNamespace() throws JsonProcessingException {
+    void savesRecordAndLedgerEntryForEnabledNamespace() throws JacksonException {
         IngestResult result = pipeline.ingest("alpha", envelope("e-1"));
 
         assertThat(result).isEqualTo(IngestResult.SAVED);
@@ -55,7 +55,7 @@ class IngestPipelineIntegrationTest {
     }
 
     @Test
-    void secondDeliveryOfTheSameMessageIsDuplicate() throws JsonProcessingException {
+    void secondDeliveryOfTheSameMessageIsDuplicate() throws JacksonException {
         assertThat(pipeline.ingest("alpha", envelope("e-1"))).isEqualTo(IngestResult.SAVED);
         assertThat(pipeline.ingest("alpha", envelope("e-1"))).isEqualTo(IngestResult.DUPLICATE);
 
@@ -63,7 +63,7 @@ class IngestPipelineIntegrationTest {
     }
 
     @Test
-    void knownButDisabledNamespaceIsDroppedWithoutWriting() throws JsonProcessingException {
+    void knownButDisabledNamespaceIsDroppedWithoutWriting() throws JacksonException {
         IngestResult result = pipeline.ingest("beta", envelope("e-1"));
 
         assertThat(result).isEqualTo(IngestResult.NAMESPACE_DISABLED);
@@ -72,7 +72,7 @@ class IngestPipelineIntegrationTest {
     }
 
     @Test
-    void unknownNamespaceIsDroppedWithoutWriting() throws JsonProcessingException {
+    void unknownNamespaceIsDroppedWithoutWriting() throws JacksonException {
         IngestResult result = pipeline.ingest("nope", envelope("e-1"));
 
         assertThat(result).isEqualTo(IngestResult.UNKNOWN_NAMESPACE);
@@ -81,7 +81,7 @@ class IngestPipelineIntegrationTest {
     }
 
     @Test
-    void countsEachResultBySourceAndNamespace() throws JsonProcessingException {
+    void countsEachResultBySourceAndNamespace() throws JacksonException {
         pipeline.ingest("alpha", envelope("metrics-1"));
 
         assertThat(meterRegistry.get("ingest.messages")
@@ -89,7 +89,7 @@ class IngestPipelineIntegrationTest {
                 .counter().count()).isGreaterThanOrEqualTo(1.0);
     }
 
-    private CommonEnvelope envelope(String dedupKey) throws JsonProcessingException {
+    private CommonEnvelope envelope(String dedupKey) throws JacksonException {
         return new CommonEnvelope(SourceKey.SOURCE_A, "orders.created", dedupKey,
                 Instant.parse("2026-01-01T00:00:00Z"),
                 objectMapper.readTree("{\"eventId\":\"" + dedupKey + "\",\"data\":{\"amount\":42}}"));

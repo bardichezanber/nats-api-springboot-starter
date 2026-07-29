@@ -4,17 +4,17 @@ import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.IngestPipeline;
 import com.example.ingest.worker.IngestResult;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -155,7 +155,7 @@ public class CompositionStage {
     private JsonNode readPayload(CompositionPart part) {
         try {
             return objectMapper.readTree(part.getPayload());
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("stored composition part " + part.getId() + " is not valid JSON", e);
         }
     }

@@ -189,7 +189,7 @@ SPRING_PROFILES_ACTIVE=worker ./mvnw spring-boot:run
 SPRING_PROFILES_ACTIVE=api    ./mvnw spring-boot:run
 
 ./scripts/verify.sh           # build + tests on H2 (MODE=MySQL), no infra needed;
-                              # locates a JDK 21 automatically if JAVA_HOME is unset
+                              # locates a JDK 25 automatically if JAVA_HOME is unset
 ```
 
 One image serves both roles:

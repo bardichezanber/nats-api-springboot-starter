@@ -5,8 +5,8 @@ import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.record.IngestedRecordRepository;
 import com.example.ingest.worker.IngestResult;
 import com.example.ingest.worker.ledger.IngestLedgerRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,23 +45,23 @@ class CompositionStageIntegrationTest {
     }
 
     private CommonEnvelope envelope(String eventType, String dedupKey, String json)
-            throws JsonProcessingException {
+            throws JacksonException {
         return new CommonEnvelope(SourceKey.SOURCE_A, eventType, dedupKey,
                 Instant.parse("2026-01-01T00:00:00Z"), objectMapper.readTree(json));
     }
 
-    private CommonEnvelope xReady(String correlationId) throws JsonProcessingException {
+    private CommonEnvelope xReady(String correlationId) throws JacksonException {
         return envelope("x.ready", "x-" + correlationId,
                 "{\"correlationId\":\"" + correlationId + "\",\"data\":{\"weight\":10}}");
     }
 
-    private CommonEnvelope yReady(String correlationId) throws JsonProcessingException {
+    private CommonEnvelope yReady(String correlationId) throws JacksonException {
         return envelope("y.ready", "y-" + correlationId,
                 "{\"correlationId\":\"" + correlationId + "\",\"data\":{\"volume\":3}}");
     }
 
     @Test
-    void alphaComposesWhenBothHalvesArrive() throws JsonProcessingException {
+    void alphaComposesWhenBothHalvesArrive() throws JacksonException {
         assertThat(stage.ingest("alpha", xReady("c-1"))).isEqualTo(IngestResult.BUFFERED);
         assertThat(records.count()).isZero();
 
@@ -78,14 +78,14 @@ class CompositionStageIntegrationTest {
     }
 
     @Test
-    void duplicatePartIsDroppedWhilePending() throws JsonProcessingException {
+    void duplicatePartIsDroppedWhilePending() throws JacksonException {
         assertThat(stage.ingest("alpha", xReady("c-2"))).isEqualTo(IngestResult.BUFFERED);
         assertThat(stage.ingest("alpha", xReady("c-2"))).isEqualTo(IngestResult.DUPLICATE);
         assertThat(records.count()).isZero();
     }
 
     @Test
-    void latePartAfterCompositionIsDropped() throws JsonProcessingException {
+    void latePartAfterCompositionIsDropped() throws JacksonException {
         stage.ingest("alpha", xReady("c-3"));
         stage.ingest("alpha", yReady("c-3"));
 
@@ -94,7 +94,7 @@ class CompositionStageIntegrationTest {
     }
 
     @Test
-    void alphaEventFromRouteBIsNotPulledIntoTheComposition() throws JsonProcessingException {
+    void alphaEventFromRouteBIsNotPulledIntoTheComposition() throws JacksonException {
         CommonEnvelope routeB = new CommonEnvelope(SourceKey.SOURCE_B, "x.ready", "b-x-1",
                 Instant.parse("2026-01-01T00:00:00Z"),
                 objectMapper.readTree("{\"data\":{\"weight\":10}}"));
@@ -111,7 +111,7 @@ class CompositionStageIntegrationTest {
     }
 
     @Test
-    void betaSingleReadyEventPassesStraightThrough() throws JsonProcessingException {
+    void betaSingleReadyEventPassesStraightThrough() throws JacksonException {
         CommonEnvelope ready = envelope("ready", "b-1",
                 "{\"attributes\":[{\"name\":\"status\",\"value\":\"ok\"}]}");
 
@@ -126,7 +126,7 @@ class CompositionStageIntegrationTest {
     }
 
     @Test
-    void composedEventIsDedupedByTheLedgerLikeAnyOther() throws JsonProcessingException {
+    void composedEventIsDedupedByTheLedgerLikeAnyOther() throws JacksonException {
         stage.ingest("alpha", xReady("c-4"));
         stage.ingest("alpha", yReady("c-4"));
         assertThat(records.count()).isEqualTo(1);

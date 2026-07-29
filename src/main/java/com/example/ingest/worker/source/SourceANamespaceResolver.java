@@ -1,6 +1,6 @@
 package com.example.ingest.worker.source;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;

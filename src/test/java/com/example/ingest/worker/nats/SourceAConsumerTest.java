@@ -7,7 +7,7 @@ import com.example.ingest.worker.composition.CompositionStage;
 import com.example.ingest.worker.IngestResult;
 import com.example.ingest.namespace.CommonPayloadReader;
 import com.example.ingest.worker.source.SourceANamespaceResolver;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.nats.client.Message;
 import io.nats.client.impl.Headers;

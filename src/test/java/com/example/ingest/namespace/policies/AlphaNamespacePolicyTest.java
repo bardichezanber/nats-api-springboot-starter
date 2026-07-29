@@ -2,9 +2,9 @@ package com.example.ingest.namespace.policies;
 
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -18,7 +18,7 @@ class AlphaNamespacePolicyTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void extractsTheDataObjectAsPayload() throws JsonProcessingException {
+    void extractsTheDataObjectAsPayload() throws JacksonException {
         CommonEnvelope envelope = envelope("""
                 {"eventId":"e-1","occurredAt":"2026-01-01T00:00:00Z","data":{"amount":42}}
                 """);
@@ -29,7 +29,7 @@ class AlphaNamespacePolicyTest {
     }
 
     @Test
-    void rejectsPayloadWithoutDataObject() throws JsonProcessingException {
+    void rejectsPayloadWithoutDataObject() throws JacksonException {
         CommonEnvelope envelope = envelope("""
                 {"eventId":"e-1","occurredAt":"2026-01-01T00:00:00Z"}
                 """);
@@ -40,7 +40,7 @@ class AlphaNamespacePolicyTest {
     }
 
     @Test
-    void expiredMarkerMergesArrivedPartsAndListsTheMissingOnes() throws JsonProcessingException {
+    void expiredMarkerMergesArrivedPartsAndListsTheMissingOnes() throws JacksonException {
         CommonEnvelope envelope = envelope("ready.composed.expired", """
                 {"parts":{"x.ready":{"correlationId":"c-1","data":{"weight":10}}},"missing":["y.ready"]}
                 """);
@@ -52,7 +52,7 @@ class AlphaNamespacePolicyTest {
     }
 
     @Test
-    void rejectsExpiredMarkerWithoutAMissingList() throws JsonProcessingException {
+    void rejectsExpiredMarkerWithoutAMissingList() throws JacksonException {
         CommonEnvelope envelope = envelope("ready.composed.expired", """
                 {"parts":{"x.ready":{"correlationId":"c-1","data":{"weight":10}}}}
                 """);
@@ -62,11 +62,11 @@ class AlphaNamespacePolicyTest {
                 .hasMessageContaining("missing");
     }
 
-    private CommonEnvelope envelope(String json) throws JsonProcessingException {
+    private CommonEnvelope envelope(String json) throws JacksonException {
         return envelope("orders.created", json);
     }
 
-    private CommonEnvelope envelope(String eventType, String json) throws JsonProcessingException {
+    private CommonEnvelope envelope(String eventType, String json) throws JacksonException {
         return new CommonEnvelope(SourceKey.SOURCE_A, eventType, "e-1",
                 Instant.parse("2026-01-01T00:00:00Z"), objectMapper.readTree(json));
     }

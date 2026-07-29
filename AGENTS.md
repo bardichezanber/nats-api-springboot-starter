@@ -139,7 +139,7 @@ package com.example.ingest.namespace.policies;
 
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.NamespacePolicy;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -310,6 +310,7 @@ public class SourceCConsumer extends BaseSourceConsumer {
 | Symptom | Fix |
 |---|---|
 | `Unable to locate a Java Runtime` | Use `./scripts/verify.sh`, not bare `./mvnw` |
+| `package com.fasterxml.jackson.databind does not exist` | Boot 4 ships Jackson 3: import `tools.jackson.databind.*`. Only `com.fasterxml.jackson.annotation.*` kept its package, and Jackson's exceptions are now unchecked (`tools.jackson.core.JacksonException`) |
 | Flyway `Validate failed: checksum mismatch` | You edited an existing migration. Revert it; put the change in a NEW `V<n>__*.sql` |
 | Hibernate `Schema-validation: missing column/table` | Entity and migration disagree — fix the new migration or the entity, never `ddl-auto` |
 | `Enabled namespaces without a NamespacePolicy implementation` | A key in `enabled` config has no `@Component` policy — add the class or remove the key |

@@ -3,8 +3,8 @@ package com.example.ingest.worker.composition.plans;
 import com.example.ingest.namespace.CommonEnvelope;
 import com.example.ingest.namespace.SourceKey;
 import com.example.ingest.worker.composition.CompositionPlan;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -19,18 +19,18 @@ class AlphaReadyCompositionPolicyTest {
     private final AlphaReadyCompositionPolicy policy = new AlphaReadyCompositionPolicy();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private CommonEnvelope envelope(String eventType, String json) throws JsonProcessingException {
+    private CommonEnvelope envelope(String eventType, String json) throws JacksonException {
         return envelope(SourceKey.SOURCE_A, eventType, json);
     }
 
     private CommonEnvelope envelope(SourceKey source, String eventType, String json)
-            throws JsonProcessingException {
+            throws JacksonException {
         return new CommonEnvelope(source, eventType, "e-1",
                 Instant.parse("2026-01-01T00:00:00Z"), objectMapper.readTree(json));
     }
 
     @Test
-    void claimsBothReadyHalvesForAlpha() throws JsonProcessingException {
+    void claimsBothReadyHalvesForAlpha() throws JacksonException {
         Optional<CompositionPlan> plan = policy.planFor("alpha",
                 envelope("x.ready", "{\"correlationId\":\"c-1\",\"data\":{\"weight\":10}}"));
 
@@ -45,14 +45,14 @@ class AlphaReadyCompositionPolicyTest {
     }
 
     @Test
-    void ignoresOtherNamespacesAndEventTypes() throws JsonProcessingException {
+    void ignoresOtherNamespacesAndEventTypes() throws JacksonException {
         assertThat(policy.planFor("beta", envelope("x.ready", "{\"correlationId\":\"c-1\"}"))).isEmpty();
         assertThat(policy.planFor("beta", envelope("ready", "{}"))).isEmpty();
         assertThat(policy.planFor("alpha", envelope("orders.created", "{}"))).isEmpty();
     }
 
     @Test
-    void ignoresAlphaReadyEventsFromOtherSources() throws JsonProcessingException {
+    void ignoresAlphaReadyEventsFromOtherSources() throws JacksonException {
         // The flow is scoped to route A: an x.ready reaching alpha via any
         // other source passes through untouched (no correlationId required).
         assertThat(policy.planFor("alpha",
@@ -62,7 +62,7 @@ class AlphaReadyCompositionPolicyTest {
     }
 
     @Test
-    void rejectsClaimedEventWithoutCorrelationId() throws JsonProcessingException {
+    void rejectsClaimedEventWithoutCorrelationId() throws JacksonException {
         CommonEnvelope missing = envelope("x.ready", "{\"data\":{}}");
 
         assertThatThrownBy(() -> policy.planFor("alpha", missing))
